@@ -93,7 +93,6 @@ function LockScreen({ biometricEnabled, pinEnabled, onUnlock }: LockScreenProps)
     // at all, so the immediate setState inside tryBiometric() is intentional
     // — not an accidental cascading render.
     if (biometricEnabled) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       void tryBiometric();
     }
     // Only auto-prompt once when the lock screen first mounts.

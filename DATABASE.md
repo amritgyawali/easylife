@@ -18,6 +18,8 @@ PostgreSQL via Supabase. Every table is user-owned and RLS-protected (see [SECUR
 
 **Invariant, enforced in Postgres, not just application code:** for any `financial_transactions` row with `status = 'confirmed'`, `sum(ledger_entries.amount_transaction_currency_minor)` for that transaction must equal exactly zero. This is a deferred constraint trigger (`ledger_entries_balance_check` in `0008_ledger.sql`) so multi-row inserts for one transaction are checked once, at commit — plus a second trigger that re-checks when a transaction transitions into `confirmed` status. Draft/pending transactions (e.g. mid-review OCR imports) are not required to balance until confirmed.
 
+Income and expense have no counter-account in `account_type`, so they balance against a per-user, per-currency **system account** (`accounts.is_system`, added in `0014_system_accounts.sql`) that plays the retained-earnings role. It is excluded from net worth and hidden from every account list — see the ARCHITECTURE.md section "How income and expense balance".
+
 `transaction_splits` divides one transaction across multiple categories for reporting (e.g. one grocery payment split between food/household/transport) — it does **not** affect `ledger_entries` or account balances, it's purely a reporting-side breakdown.
 
 Balances are never stored as the source of truth: `recompute_account_balance()` / `account_balance_snapshots` derive/cache from `ledger_entries`, and the cache has no client-facing write policy — only trusted server-side logic (a future `SECURITY DEFINER` function) may refresh it.
@@ -34,7 +36,7 @@ Balances are never stored as the source of truth: `recompute_account_balance()` 
 
 ## Full table list
 
-See `supabase/migrations/0001` through `0013` for the authoritative definitions. Summary by area:
+See `supabase/migrations/0001` through `0014` for the authoritative definitions. Summary by area:
 
 | Area                   | Tables                                                                                                                                                 |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |

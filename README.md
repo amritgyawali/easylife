@@ -4,11 +4,19 @@ A free-first personal life-management app — schedule, tasks, habits, notes, fi
 
 The product name is configurable in one place: `src/constants/app.ts` (`APP_NAME`).
 
-> **Status:** Phase 1 (Foundation) is complete — auth, onboarding, the full database schema + RLS, the responsive navigation shell, settings, and biometric/PIN app lock all work end-to-end against a real Supabase project. Feature areas beyond that (dashboard, tasks, finance, loans, OCR, offline sync) currently render a "coming in Phase N" placeholder inside the real navigation shell — see [ARCHITECTURE.md](./ARCHITECTURE.md) for the phase plan.
+> **Status:** Phases 1–3 are complete against a real Supabase project.
+>
+> - **Phase 1 (Foundation)** — auth, onboarding, the full database schema + RLS, the responsive navigation shell, settings, biometric/PIN app lock.
+> - **Phase 2 (Daily life)** — dashboard, Today, planner/tasks, habits with streaks, notes, calendar agenda, and cross-feature search.
+> - **Phase 3 (Finance)** — accounts with ledger-derived balances, double-entry income/expense/transfer posting, categories, counterparties, and monthly reports.
+>
+> Still placeholders: people, loans, investments, documents/OCR, imports, budgets and goals. Transactions are single-currency for now (both accounts in a transfer must share a currency); per-leg exchange rates arrive in Phase 4. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full phase plan.
+>
+> **Known issue:** `npx expo export -p web` currently fails with `resetServerContext is not a function` during static rendering. This is a leftover from the SDK 57 → 54 downgrade, not a regression from feature work — `npm run typecheck`, `lint`, `format:check` and `test` are all clean, and Metro/dev serves every route fine.
 
 ## Prerequisites
 
-- Node.js **22.13+** (required by Expo SDK 57)
+- Node.js **22.13+**
 - npm
 - A free [Supabase](https://supabase.com) account/project
 - For native builds: [EAS CLI](https://docs.expo.dev/eas/) or Android Studio / Xcode locally

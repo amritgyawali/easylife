@@ -12,3 +12,6 @@ supabase/.temp
 # Emitted verbatim by `npm run db:types`; reformatting it would make every
 # regeneration show up as a diff.
 src/types/database.ts
+
+# Generated knowledge-graph output from the graphify skill.
+graphify-out

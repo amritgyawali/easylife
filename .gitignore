@@ -55,3 +55,6 @@ blob-report/
 # generated native folders
 /ios
 /android
+
+# Generated knowledge-graph output from the graphify skill, not project source.
+graphify-out

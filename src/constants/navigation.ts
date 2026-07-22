@@ -20,9 +20,11 @@ export const MOBILE_TABS: NavItem[] = [
 
 /** Everything not on the mobile tab bar lives in the "More" menu. */
 export const MORE_MENU_ITEMS: NavItem[] = [
+  { label: 'Search', href: '/search', icon: 'search-outline' },
   { label: 'Calendar', href: '/calendar', icon: 'calendar-outline' },
   { label: 'Habits', href: '/habits', icon: 'repeat-outline' },
   { label: 'Accounts', href: '/finance/accounts', icon: 'card-outline' },
+  { label: 'Categories', href: '/finance/categories', icon: 'pricetags-outline' },
   { label: 'People', href: '/people', icon: 'people-outline' },
   { label: 'Loans', href: '/loans', icon: 'swap-horizontal-outline' },
   { label: 'Investments', href: '/investments', icon: 'trending-up-outline' },
@@ -37,6 +39,7 @@ export const MORE_MENU_ITEMS: NavItem[] = [
 /** Desktop/web sidebar (section 5: "Desktop and web navigation"). */
 export const SIDEBAR_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: 'grid-outline' },
+  { label: 'Search', href: '/search', icon: 'search-outline' },
   { label: 'Today', href: '/today', icon: 'today-outline' },
   { label: 'Calendar', href: '/calendar', icon: 'calendar-outline' },
   { label: 'Tasks', href: '/tasks', icon: 'checkbox-outline' },
@@ -44,6 +47,7 @@ export const SIDEBAR_ITEMS: NavItem[] = [
   { label: 'Notes', href: '/notes', icon: 'document-text-outline' },
   { label: 'Accounts', href: '/finance/accounts', icon: 'card-outline' },
   { label: 'Transactions', href: '/finance', icon: 'swap-vertical-outline' },
+  { label: 'Categories', href: '/finance/categories', icon: 'pricetags-outline' },
   { label: 'People', href: '/people', icon: 'people-outline' },
   { label: 'Loans', href: '/loans', icon: 'cash-outline' },
   { label: 'Investments', href: '/investments', icon: 'trending-up-outline' },

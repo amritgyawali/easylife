@@ -70,6 +70,7 @@ export type Database = {
           include_in_net_worth: boolean
           institution: string | null
           is_active: boolean
+          is_system: boolean
           last_four: string | null
           masked_account_number: string | null
           name: string
@@ -91,6 +92,7 @@ export type Database = {
           include_in_net_worth?: boolean
           institution?: string | null
           is_active?: boolean
+          is_system?: boolean
           last_four?: string | null
           masked_account_number?: string | null
           name: string
@@ -112,6 +114,7 @@ export type Database = {
           include_in_net_worth?: boolean
           institution?: string | null
           is_active?: boolean
+          is_system?: boolean
           last_four?: string | null
           masked_account_number?: string | null
           name?: string

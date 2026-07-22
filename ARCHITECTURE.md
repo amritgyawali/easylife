@@ -6,7 +6,7 @@ Amrit LifeOS is a single Expo (React Native + React Native Web) codebase deploye
 
 ### Front end
 
-- **Expo + Expo Router, SDK 57.** `src/app` is the router root — this has been the zero-config default location since Expo SDK 55, so no `expo-router` config-plugin `root` option is needed (that option is explicitly discouraged by Expo's own docs for anything other than the default).
+- **Expo + Expo Router, SDK 54** (pinned — see [AGENTS.md](./AGENTS.md) for why it must not be upgraded). `src/app` is the router root, which Metro picks up automatically; no `expo-router` config-plugin `root` option is needed, and that option is explicitly discouraged by Expo's own docs for anything other than the default.
 - **React Native Web** for the web target, exported statically (`web.output: "static"` in `app.json`) so Vercel can serve it as a plain static site.
 - **Styling: a custom themed primitive layer** (`src/components/ui`, tokens in `src/constants/theme.ts`) instead of NativeWind. NativeWind adds a Tailwind/PostCSS compilation pipeline on top of Metro, which is one more moving part that can break across three renderers (Android/iOS/web) for a project this size. Plain `StyleSheet`-based themed components have zero extra build tooling and are trivially portable. If a future contributor prefers NativeWind, the token file (`spacing`, `radius`, `fontSize`, `Theme`) is the single place to bridge from.
 - **TanStack Query** owns all server/domain data (Supabase reads/writes, cached with query keys). **Zustand** is intentionally restricted to small, ephemeral, device-local UI state (`theme-store.ts`, `app-lock-store.ts`) — never business data. Mixing the two is a common source of stale/duplicated state, so the project convention is: if it round-trips to Supabase, it's a Query; if it's just "is the drawer open," it's Zustand.
@@ -21,11 +21,21 @@ A single `AppShell` component (`src/components/layout/AppShell.tsx`) renders eit
 
 Every top-level route segment (`today/`, `tasks/`, `notes/`, `finance/`, `people/`, `loans/`, `investments/`, `documents/`, `imports/`, `reports/`, `settings/`, `habits/`, `calendar/`, `scan/`) has its own one-line `_layout.tsx` that renders `<AuthenticatedLayout />`, which guards on session and wraps content in `<AppShell>`. This keeps chrome and the auth guard from ever drifting between sections, while matching the flat `app/tasks/`, `app/notes/`, ... structure requested rather than nesting everything inside one route group.
 
-Screens for features not yet built in the current phase render `<ComingSoonScreen phase="Phase N" />` instead of being dead links — see the phase notes below.
+Screens for features not yet built in the current phase render `<ComingSoonScreen phase="Phase N" />` instead of being dead links — see the phase notes below. As of Phase 3 that is only `people`, `loans`, `investments`, `documents`, `imports`, `scan`, and the budgets/goals sub-routes.
+
+Every built screen is wrapped in `<Screen>` (`src/components/layout/Screen.tsx`), which owns safe-area insets, gutters, pull-to-refresh, and the max content width so a task list doesn't stretch across a 2000px desktop viewport.
 
 ### Backend / database
 
 See [DATABASE.md](./DATABASE.md) for the full schema and [SECURITY.md](./SECURITY.md) for Row Level Security. In short: a proper double-entry ledger (`financial_transactions` + `ledger_entries`) with a Postgres trigger that rejects unbalanced _posted_ transactions, integer minor-unit money throughout, and soft deletion (`deleted_at`) plus `version` columns on every syncable table for the future offline engine.
+
+#### How income and expense balance (the system account)
+
+The `account_type` enum only models accounts the user actually owns or owes — there is no income or expense account to be the other side of a spend. But the balance trigger requires every _confirmed_ transaction's entries to sum to zero, so a one-legged "spent 500 from my bank account" is rejected by Postgres.
+
+The resolution (`0014_system_accounts.sql`, `src/features/finance/ledger.ts`) is a per-user, per-currency **system account** that plays the income/expense (retained earnings) role: an expense debits the asset account and credits the system account; income is the reverse; a transfer needs no system leg because both sides are real accounts. System accounts carry `is_system = true`, are excluded from net worth, and are filtered out of every account list and picker — `useAccounts()` returns real accounts, `useAllAccounts()` includes the system rows for posting. They are created lazily on first use in a currency, made safe against a two-device race by a partial unique index on `(user_id, currency) where is_system`.
+
+Account balances are derived from `ledger_entries` in the client (`useAccountBalances`), not read from `account_balance_snapshots` — that table is a cache with no client-facing write policy, so reading it would show a number the app can never refresh.
 
 ### Offline & sync (Phase 6)
 
@@ -43,10 +53,10 @@ Not yet implemented. Planned `OCRProvider` interface with three backends (ML Kit
 
 Phases match the spec's required order. Each phase must typecheck, lint, and pass its tests before the next begins.
 
-1. **Foundation** (this codebase, current state) — project setup, design system, Supabase client, auth, env validation, full DB schema + RLS, responsive nav shell, profile/settings, biometric+PIN app lock, error boundary, logging.
-2. **Daily life** — dashboard, tasks, planner, habits, notes, search, notifications.
-3. **Finance** — accounts, ledger-backed income/expense/transfer, categories, counterparties, reports.
-4. **Loans & investments** — People module, lending/borrowing, repayments, investments, savings goals, net worth.
+1. ~~**Foundation**~~ (done) — project setup, design system, Supabase client, auth, env validation, full DB schema + RLS, responsive nav shell, profile/settings, biometric+PIN app lock, error boundary, logging.
+2. ~~**Daily life**~~ (done) — dashboard, tasks, planner, habits, notes, calendar, cross-feature search. Local notification _scheduling_ is deferred to Phase 7 alongside the rest of the delivery work; the preference toggles already exist.
+3. ~~**Finance**~~ (done) — accounts with derived balances, ledger-backed income/expense/transfer, categories, counterparties, monthly reports. Multi-currency transactions (a transaction whose accounts don't share a currency) need per-leg exchange rates and land in Phase 4.
+4. **Loans & investments** — People module, lending/borrowing, repayments, investments, savings goals, net worth, multi-currency conversion.
 5. **Documents & extraction** — document vault, OCR abstraction, statement parsing, review queue, reconciliation.
 6. **Sync & exports** — offline SQLite engine, outbox queue, conflict handling, CSV/JSON/PDF exports.
 7. **Deployment & hardening** — Vercel, Resend, security headers, full test pass, accessibility/performance review.

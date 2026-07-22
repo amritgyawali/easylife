@@ -5,14 +5,9 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/auth/useProfile';
 import { useTheme } from '@/hooks/useTheme';
 import { AppShell } from '@/components/layout/AppShell';
-import { ComingSoonScreen } from '@/components/layout/ComingSoonScreen';
+import { DashboardScreen } from '@/features/dashboard/DashboardScreen';
 
-/**
- * Root route: gates on auth, then onboarding, then shows the dashboard.
- * The dashboard itself (customisable cards, quick actions) is Phase 2 work —
- * this renders a placeholder inside the real navigation shell so the shell
- * is fully exercised from day one.
- */
+/** Root route: gates on auth, then onboarding, then shows the dashboard. */
 export default function RootIndexScreen() {
   const theme = useTheme();
   const { session, isLoading: isAuthLoading } = useAuth();
@@ -43,7 +38,7 @@ export default function RootIndexScreen() {
 
   return (
     <AppShell>
-      <ComingSoonScreen title="Dashboard" phase="Phase 2 (Daily life)" />
+      <DashboardScreen />
     </AppShell>
   );
 }

@@ -1,0 +1,10 @@
+node_modules
+dist
+web-build
+.expo
+coverage
+package-lock.json
+supabase/.branches
+supabase/.temp
+# No SQL parser plugin installed — SQL files are hand-formatted consistently instead.
+*.sql

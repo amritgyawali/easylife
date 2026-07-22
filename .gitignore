@@ -30,8 +30,24 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files — never commit real secrets; see .env.example for the template
+.env
+.env.local
 .env*.local
+supabase/.temp/
+supabase/.branches/
+
+# coverage
+coverage/
+
+# playwright
+test-results/
+playwright-report/
+blob-report/
+
+# editors
+.vscode/*
+!.vscode/extensions.json
 
 # typescript
 *.tsbuildinfo

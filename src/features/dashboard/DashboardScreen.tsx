@@ -20,7 +20,8 @@ import { completedOn, tasksDueToday } from '@/features/tasks/grouping';
 import { TaskListItem } from '@/features/tasks/TaskListItem';
 import { useHabitEntries, useHabits } from '@/features/habits/api';
 import { indexEntriesByDate, isCompleted, isScheduledOn } from '@/features/habits/streaks';
-import { useAccountBalances } from '@/features/finance/use-balances';
+import { NetWorthCard } from '@/features/networth/NetWorthCard';
+import { useNetWorth } from '@/features/networth/use-net-worth';
 import { useTransactions } from '@/features/finance/transactions-api';
 import { monthRange, summarise } from '@/features/finance/reports';
 
@@ -41,7 +42,7 @@ export function DashboardScreen() {
   const habitsQuery = useHabits();
   const habitEntriesQuery = useHabitEntries(today, 7);
   const transactionsQuery = useTransactions();
-  const balances = useAccountBalances();
+  const netWorth = useNetWorth();
   const toggleComplete = useToggleTaskComplete();
 
   const dueToday = useMemo(() => tasksDueToday(tasksQuery.data ?? [], today), [tasksQuery.data, today]);
@@ -80,7 +81,7 @@ export function DashboardScreen() {
     [transactionsQuery.data, today]
   );
 
-  const isLoading = tasksQuery.isLoading || habitsQuery.isLoading || balances.isLoading;
+  const isLoading = tasksQuery.isLoading || habitsQuery.isLoading || netWorth.isLoading;
   const firstName = profile?.profile.full_name?.split(' ')[0];
 
   function refetch() {
@@ -88,7 +89,7 @@ export function DashboardScreen() {
     void habitsQuery.refetch();
     void habitEntriesQuery.refetch();
     void transactionsQuery.refetch();
-    balances.refetch();
+    netWorth.refetch();
   }
 
   return (
@@ -116,28 +117,13 @@ export function DashboardScreen() {
             <QuickAction icon="repeat-outline" label="Habits" onPress={() => router.push('/habits')} />
           </View>
 
-          <Card style={{ gap: spacing.md }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              NET WORTH
-            </ThemedText>
-            {balances.netWorthByCurrency.size === 0 ? (
-              <ThemedText variant="body" tone="muted">
-                Add an account to start tracking.
-              </ThemedText>
-            ) : (
-              [...balances.netWorthByCurrency.entries()].map(([currency, total]) => (
-                <ThemedText key={currency} variant="title" tone={total < 0 ? 'negative' : 'default'}>
-                  {formatMoney(total, currency)}
-                </ThemedText>
-              ))
-            )}
-            <Button
-              label="Accounts"
-              size="sm"
-              variant="ghost"
-              onPress={() => router.push('/finance/accounts')}
-            />
-          </Card>
+          <NetWorthCard compact />
+          <Button
+            label="Accounts"
+            size="sm"
+            variant="ghost"
+            onPress={() => router.push('/finance/accounts')}
+          />
 
           {thisMonth.map((summary) => (
             <Card key={summary.currency} style={{ gap: spacing.md }}>

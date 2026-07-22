@@ -50,7 +50,13 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
   const [categoryId, setCategoryId] = useState<string>('');
   const [counterpartyId, setCounterpartyId] = useState<string>('');
   const [description, setDescription] = useState('');
-  const [errors, setErrors] = useState<{ amount?: string; account?: string; destination?: string }>({});
+  const [exchangeRate, setExchangeRate] = useState('');
+  const [errors, setErrors] = useState<{
+    amount?: string;
+    account?: string;
+    destination?: string;
+    rate?: string;
+  }>({});
 
   useEffect(() => {
     if (!visible) return;
@@ -62,11 +68,18 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
     setCategoryId('');
     setCounterpartyId('');
     setDescription('');
+    setExchangeRate('');
     setErrors({});
   }, [visible, today, defaultAccountId, accounts]);
 
   const selectedAccount = accounts?.find((account) => account.id === accountId);
   const currency = selectedAccount?.currency ?? 'NPR';
+
+  const destinationAccount = accounts?.find((account) => account.id === destinationAccountId);
+  // A transfer between accounts in different currencies is the only case that
+  // needs a rate; everything else is a single-currency movement.
+  const needsRate =
+    kind === 'transfer' && Boolean(destinationAccount) && destinationAccount!.currency !== currency;
 
   // Categories are typed the same way transactions are, so an expense should
   // never offer an income category.
@@ -80,6 +93,9 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
     if (!accountId) nextErrors.account = 'Choose an account.';
     if (amount.trim() === '' || Number(amount) <= 0) nextErrors.amount = 'Enter an amount.';
     if (kind === 'transfer' && !destinationAccountId) nextErrors.destination = 'Choose where it goes.';
+    if (needsRate && (exchangeRate.trim() === '' || Number(exchangeRate) <= 0)) {
+      nextErrors.rate = 'Enter the exchange rate.';
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -97,6 +113,7 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
         categoryId: categoryId || null,
         counterpartyId: counterpartyId || null,
         description,
+        exchangeRate: needsRate ? Number(exchangeRate) : null,
       },
     });
 
@@ -182,6 +199,29 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
             <ThemedText variant="caption" tone="negative">
               {errors.destination}
             </ThemedText>
+          ) : null}
+
+          {needsRate ? (
+            <>
+              <TextField
+                label={`Rate — ${destinationAccount!.currency} per 1 ${currency}`}
+                value={exchangeRate}
+                onChangeText={(value) => {
+                  setExchangeRate(value);
+                  setErrors((current) => ({ ...current, rate: undefined }));
+                }}
+                error={errors.rate}
+                keyboardType="decimal-pad"
+                placeholder="e.g. 0.0115"
+                helpText={
+                  amount && Number(exchangeRate) > 0
+                    ? `${amount} ${currency} becomes about ${(Number(amount) * Number(exchangeRate)).toFixed(
+                        2
+                      )} ${destinationAccount!.currency}.`
+                    : 'Each account moves in its own currency; the rate links the two.'
+                }
+              />
+            </>
           ) : null}
         </>
       ) : null}

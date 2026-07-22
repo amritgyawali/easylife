@@ -7,8 +7,9 @@ import { unwrap, unwrapVoid } from '@/features/shared/unwrap';
 import { AppError } from '@/utils/errors';
 import { toMinorUnits } from '@/utils/money';
 import type { IsoDate } from '@/utils/date';
-import type { Database } from '@/types/database';
+import type { Database, TransactionType } from '@/types/database';
 import { getOrCreateSystemAccount, type AccountRow } from '@/features/finance/accounts-api';
+import { convertMinorUnits } from '@/features/finance/currency';
 import {
   buildLedgerLegs,
   isBalanced,
@@ -89,6 +90,15 @@ export interface TransactionInput {
   counterpartyId?: string | null;
   description?: string | null;
   notes?: string | null;
+  /**
+   * Units of the destination currency per one unit of the source currency.
+   * Required only for a transfer whose two accounts use different
+   * currencies; ignored otherwise.
+   */
+  exchangeRate?: number | null;
+  /** Set when the transaction is created by the loans or investments module. */
+  loanId?: string | null;
+  transactionType?: TransactionType;
 }
 
 /**
@@ -113,25 +123,44 @@ export function useCreateTransaction() {
       const account = accounts.find((row) => row.id === input.accountId);
       if (!account) throw new AppError('validation_failed', 'Choose an account');
 
+      // The source account's currency is the transaction's accounting
+      // currency, and the currency the zero-sum invariant is checked in.
       const currency = account.currency;
-
-      // Multi-currency transactions need an exchange rate on every leg to
-      // stay balanced in the accounting currency; that is Phase 4 work, so
-      // for now a transfer must stay within one currency rather than post
-      // entries that silently don't balance.
-      if (input.kind === 'transfer') {
-        const destination = accounts.find((row) => row.id === input.destinationAccountId);
-        if (!destination) throw new AppError('validation_failed', 'Choose an account to transfer into');
-        if (destination.currency !== currency) {
-          throw new AppError(
-            'validation_failed',
-            'Both accounts in a transfer must use the same currency for now'
-          );
-        }
-      }
 
       const amountMinor = toMinorUnits(input.amount, currency);
       if (amountMinor <= 0) throw new AppError('validation_failed', 'Enter an amount greater than zero');
+
+      let destinationCurrency: string | null = null;
+      let destinationAmountMinor: number | null = null;
+      let exchangeRate: number | null = null;
+
+      if (input.kind === 'transfer') {
+        const destination = accounts.find((row) => row.id === input.destinationAccountId);
+        if (!destination) throw new AppError('validation_failed', 'Choose an account to transfer into');
+
+        destinationCurrency = destination.currency;
+
+        if (destination.currency === currency) {
+          destinationAmountMinor = amountMinor;
+        } else {
+          // Crossing currencies is only unambiguous with a rate: the two
+          // accounts must each move by an amount in their own currency, and
+          // nothing else in the data says how those two amounts relate.
+          if (!input.exchangeRate || input.exchangeRate <= 0) {
+            throw new AppError(
+              'validation_failed',
+              'Enter the exchange rate to transfer between different currencies'
+            );
+          }
+          exchangeRate = input.exchangeRate;
+          destinationAmountMinor = convertMinorUnits(
+            amountMinor,
+            currency,
+            destination.currency,
+            input.exchangeRate
+          );
+        }
+      }
 
       // A transfer is real-account to real-account, so it needs no clearing leg.
       const systemAccountId =
@@ -140,8 +169,11 @@ export function useCreateTransaction() {
       const legs = buildLedgerLegs({
         kind: input.kind,
         amountMinor,
+        currency,
         accountId: input.accountId,
         destinationAccountId: input.destinationAccountId,
+        destinationCurrency,
+        destinationAmountMinor,
         systemAccountId,
       });
 
@@ -158,14 +190,16 @@ export function useCreateTransaction() {
         await supabase.from('financial_transactions').insert({
           id: transactionId,
           user_id: owner,
-          transaction_type: TRANSACTION_TYPE_FOR_KIND[input.kind],
+          transaction_type: input.transactionType ?? TRANSACTION_TYPE_FOR_KIND[input.kind],
           transaction_date: input.date,
           amount_minor: amountMinor,
           currency,
+          exchange_rate: exchangeRate,
           account_id: input.accountId,
           destination_account_id: input.kind === 'transfer' ? input.destinationAccountId : null,
           category_id: input.categoryId ?? null,
           counterparty_id: input.counterpartyId ?? null,
+          loan_id: input.loanId ?? null,
           description: input.description?.trim() || null,
           notes: input.notes?.trim() || null,
           status: 'confirmed',
@@ -177,11 +211,11 @@ export function useCreateTransaction() {
           user_id: owner,
           transaction_id: transactionId,
           account_id: leg.accountId,
+          // Native to the account, so balances stay in the account's own
+          // currency; the accounting-currency column is what must balance.
           amount_minor: leg.amountMinor,
-          currency,
-          // Single-currency for now, so the entry and the transaction's
-          // accounting currency amounts are the same number.
-          amount_transaction_currency_minor: leg.amountMinor,
+          currency: leg.currency,
+          amount_transaction_currency_minor: leg.amountTransactionCurrencyMinor,
         }))
       );
 

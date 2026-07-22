@@ -21,18 +21,42 @@ export type LedgerTransactionKind = 'income' | 'expense' | 'transfer';
 
 export interface LedgerLeg {
   accountId: string;
-  /** Signed minor units, native to the account's currency. */
+  /**
+   * Signed minor units, native to the account's own currency. Account
+   * balances are summed from this column.
+   */
   amountMinor: number;
+  /** The account's currency, denominating `amountMinor`. */
+  currency: string;
+  /**
+   * The same entry restated in the transaction's accounting currency. This
+   * is the column the zero-sum invariant is checked against, which is what
+   * lets a cross-currency transfer balance: both legs are equal and opposite
+   * here even though `amountMinor` differs on each side.
+   */
+  amountTransactionCurrencyMinor: number;
 }
 
 export interface BuildLegsInput {
   kind: LedgerTransactionKind;
-  /** Always positive — direction is expressed by `kind`, not by the sign. */
+  /**
+   * Always positive — direction is expressed by `kind`, not by the sign.
+   * Denominated in the transaction's accounting currency.
+   */
   amountMinor: number;
+  /** The transaction's accounting currency (the source account's currency). */
+  currency: string;
   /** The asset/liability account money leaves from or arrives in. */
   accountId: string;
   /** Required for a transfer: the account money arrives in. */
   destinationAccountId?: string | null;
+  /** The destination account's currency; equals `currency` for a same-currency transfer. */
+  destinationCurrency?: string | null;
+  /**
+   * What the destination account actually receives, in *its* currency. Only
+   * needed when the two accounts differ; defaults to `amountMinor`.
+   */
+  destinationAmountMinor?: number | null;
   /**
    * Per-currency clearing account standing in for the income/expense side of
    * the entry. See `0014_system_accounts.sql` for why it exists. Not needed
@@ -47,9 +71,14 @@ export interface BuildLegsInput {
  * Income and expense are two-legged against the system clearing account
  * rather than one-legged, because a single entry can never sum to zero and
  * the database would reject it.
+ *
+ * A cross-currency transfer is the reason `amountMinor` and
+ * `amountTransactionCurrencyMinor` are separate: each account is credited or
+ * debited in its own currency, while the balance check sees two equal and
+ * opposite amounts in the transaction's accounting currency.
  */
 export function buildLedgerLegs(input: BuildLegsInput): LedgerLeg[] {
-  const { kind, amountMinor, accountId, destinationAccountId, systemAccountId } = input;
+  const { kind, amountMinor, currency, accountId, destinationAccountId, systemAccountId } = input;
 
   if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
     throw new AppError(
@@ -58,17 +87,34 @@ export function buildLedgerLegs(input: BuildLegsInput): LedgerLeg[] {
     );
   }
 
+  const sourceLeg = (signed: number): LedgerLeg => ({
+    accountId,
+    amountMinor: signed,
+    currency,
+    amountTransactionCurrencyMinor: signed,
+  });
+
   switch (kind) {
     case 'expense':
       return [
-        { accountId, amountMinor: -amountMinor },
-        { accountId: requireSystemAccount(systemAccountId), amountMinor },
+        sourceLeg(-amountMinor),
+        {
+          accountId: requireSystemAccount(systemAccountId),
+          amountMinor,
+          currency,
+          amountTransactionCurrencyMinor: amountMinor,
+        },
       ];
 
     case 'income':
       return [
-        { accountId, amountMinor },
-        { accountId: requireSystemAccount(systemAccountId), amountMinor: -amountMinor },
+        sourceLeg(amountMinor),
+        {
+          accountId: requireSystemAccount(systemAccountId),
+          amountMinor: -amountMinor,
+          currency,
+          amountTransactionCurrencyMinor: -amountMinor,
+        },
       ];
 
     case 'transfer': {
@@ -78,9 +124,27 @@ export function buildLedgerLegs(input: BuildLegsInput): LedgerLeg[] {
       if (destinationAccountId === accountId) {
         throw new AppError('validation_failed', 'A transfer needs two different accounts');
       }
+
+      const destinationCurrency = input.destinationCurrency ?? currency;
+      const destinationAmountMinor = input.destinationAmountMinor ?? amountMinor;
+
+      if (!Number.isInteger(destinationAmountMinor) || destinationAmountMinor <= 0) {
+        throw new AppError(
+          'validation_failed',
+          'The converted amount must be a positive whole number of minor units'
+        );
+      }
+
       return [
-        { accountId, amountMinor: -amountMinor },
-        { accountId: destinationAccountId, amountMinor },
+        sourceLeg(-amountMinor),
+        {
+          accountId: destinationAccountId,
+          // What the receiving account actually gains, in its own currency…
+          amountMinor: destinationAmountMinor,
+          currency: destinationCurrency,
+          // …but the balance check only ever sees the accounting currency.
+          amountTransactionCurrencyMinor: amountMinor,
+        },
       ];
     }
   }
@@ -93,9 +157,16 @@ function requireSystemAccount(systemAccountId: string | null): string {
   return systemAccountId;
 }
 
-/** True when a set of legs satisfies the database's zero-sum invariant. */
+/**
+ * True when a set of legs satisfies the database's zero-sum invariant.
+ *
+ * Checks the accounting-currency column, matching `assert_ledger_balanced`
+ * exactly. Summing the native `amountMinor` instead would wrongly reject
+ * every cross-currency transfer, where the two sides are different numbers
+ * of different currencies by design.
+ */
 export function isBalanced(legs: LedgerLeg[]): boolean {
-  return legs.reduce((total, leg) => total + leg.amountMinor, 0) === 0;
+  return legs.reduce((total, leg) => total + leg.amountTransactionCurrencyMinor, 0) === 0;
 }
 
 /** The `transaction_type` enum value stored on the header row for each kind. */

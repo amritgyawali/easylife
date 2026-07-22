@@ -14,6 +14,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { formatMoney } from '@/utils/money';
 import { useAccountBalances } from '@/features/finance/use-balances';
 import { AccountFormSheet } from '@/features/finance/AccountFormSheet';
+import { NetWorthCard } from '@/features/networth/NetWorthCard';
 import type { AccountRow } from '@/features/finance/accounts-api';
 
 export default function AccountsScreen() {
@@ -55,9 +56,11 @@ export default function AccountsScreen() {
         />
       ) : (
         <>
+          <NetWorthCard />
+
           <Card style={{ gap: spacing.sm }}>
             <ThemedText variant="label" tone="muted" weight="semibold">
-              NET WORTH
+              IN ACCOUNTS
             </ThemedText>
             {netWorthByCurrency.size === 0 ? (
               <ThemedText variant="body" tone="muted">
@@ -65,16 +68,11 @@ export default function AccountsScreen() {
               </ThemedText>
             ) : (
               [...netWorthByCurrency.entries()].map(([currency, total]) => (
-                <ThemedText key={currency} variant="title" tone={total < 0 ? 'negative' : 'default'}>
+                <ThemedText key={currency} variant="subtitle" tone={total < 0 ? 'negative' : 'default'}>
                   {formatMoney(total, currency)}
                 </ThemedText>
               ))
             )}
-            {netWorthByCurrency.size > 1 ? (
-              <ThemedText variant="caption" tone="muted">
-                Shown per currency — currencies are not converted without live rates.
-              </ThemedText>
-            ) : null}
           </Card>
 
           {active.map(({ account, balanceMinor }) => (

@@ -8,3 +8,7 @@ supabase/.branches
 supabase/.temp
 # No SQL parser plugin installed — SQL files are hand-formatted consistently instead.
 *.sql
+
+# Emitted verbatim by `npm run db:types`; reformatting it would make every
+# regeneration show up as a diff.
+src/types/database.ts

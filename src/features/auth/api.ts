@@ -1,7 +1,7 @@
 import type { AuthError, Session } from '@supabase/supabase-js';
 
 import { getSupabaseClient } from '@/services/supabase/client';
-import { APP_URL } from '@/constants/app';
+import { authRedirectUrl } from '@/features/auth/redirect';
 import { AppError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 
@@ -44,7 +44,7 @@ export async function signUpWithPassword({ email, password, fullName }: SignUpIn
     password,
     options: {
       data: fullName ? { full_name: fullName } : undefined,
-      emailRedirectTo: `${APP_URL}/auth/callback`,
+      emailRedirectTo: authRedirectUrl('/callback'),
     },
   });
 
@@ -73,7 +73,7 @@ export async function signInWithMagicLink(email: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${APP_URL}/auth/callback` },
+    options: { emailRedirectTo: authRedirectUrl('/callback') },
   });
 
   if (error) throw mapAuthError(error);
@@ -83,7 +83,7 @@ export async function signInWithMagicLink(email: string): Promise<void> {
 export async function requestPasswordReset(email: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${APP_URL}/auth/reset-password`,
+    redirectTo: authRedirectUrl('/reset-password'),
   });
 
   if (error) throw mapAuthError(error);

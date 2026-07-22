@@ -56,7 +56,8 @@
         {
           "enableFTS": true
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

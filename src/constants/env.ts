@@ -23,6 +23,14 @@ const clientEnvSchema = z.object({
   EXPO_PUBLIC_APP_NAME: z.string().min(1).default('Amrit LifeOS'),
   EXPO_PUBLIC_DEFAULT_TIMEZONE: z.string().min(1).default('Asia/Kathmandu'),
   EXPO_PUBLIC_DEFAULT_CURRENCY: z.string().length(3).default('NPR'),
+  /**
+   * Client-side mirrors of the free-tier upload limits. These exist so the
+   * app can reject an oversized file before spending bandwidth and storage
+   * quota on it; the server-side `MAX_UPLOAD_MB` / `MAX_PDF_PAGES` remain
+   * authoritative, since anything enforced only in the client is advisory.
+   */
+  EXPO_PUBLIC_MAX_UPLOAD_MB: z.coerce.number().positive().default(15),
+  EXPO_PUBLIC_MAX_PDF_PAGES: z.coerce.number().positive().default(20),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
@@ -55,6 +63,8 @@ export function getEnv(): ClientEnv {
     EXPO_PUBLIC_APP_NAME: process.env.EXPO_PUBLIC_APP_NAME,
     EXPO_PUBLIC_DEFAULT_TIMEZONE: process.env.EXPO_PUBLIC_DEFAULT_TIMEZONE,
     EXPO_PUBLIC_DEFAULT_CURRENCY: process.env.EXPO_PUBLIC_DEFAULT_CURRENCY,
+    EXPO_PUBLIC_MAX_UPLOAD_MB: process.env.EXPO_PUBLIC_MAX_UPLOAD_MB,
+    EXPO_PUBLIC_MAX_PDF_PAGES: process.env.EXPO_PUBLIC_MAX_PDF_PAGES,
   };
 
   const result = clientEnvSchema.safeParse(raw);
@@ -66,4 +76,22 @@ export function getEnv(): ClientEnv {
 
   cachedEnv = result.data;
   return cachedEnv;
+}
+
+/**
+ * Largest file the app will attempt to upload, in megabytes.
+ *
+ * A function rather than a module-level constant on purpose: reading it at
+ * import time would make `getEnv()` throw while modules are still being
+ * evaluated, before `EnvGate` has a chance to render the friendly
+ * "app is not configured" screen — turning a clear message into a white
+ * screen and a stack trace.
+ */
+export function maxUploadMb(): number {
+  return getEnv().EXPO_PUBLIC_MAX_UPLOAD_MB;
+}
+
+/** Most pages the app will attempt to extract from one PDF. */
+export function maxPdfPages(): number {
+  return getEnv().EXPO_PUBLIC_MAX_PDF_PAGES;
 }

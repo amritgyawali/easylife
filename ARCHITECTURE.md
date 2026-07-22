@@ -21,7 +21,7 @@ A single `AppShell` component (`src/components/layout/AppShell.tsx`) renders eit
 
 Every top-level route segment (`today/`, `tasks/`, `notes/`, `finance/`, `people/`, `loans/`, `investments/`, `documents/`, `imports/`, `reports/`, `settings/`, `habits/`, `calendar/`, `scan/`) has its own one-line `_layout.tsx` that renders `<AuthenticatedLayout />`, which guards on session and wraps content in `<AppShell>`. This keeps chrome and the auth guard from ever drifting between sections, while matching the flat `app/tasks/`, `app/notes/`, ... structure requested rather than nesting everything inside one route group.
 
-Screens for features not yet built in the current phase render `<ComingSoonScreen phase="Phase N" />` instead of being dead links — see the phase notes below. As of Phase 3 that is only `people`, `loans`, `investments`, `documents`, `imports`, `scan`, and the budgets/goals sub-routes.
+Screens for features not yet built in the current phase render `<ComingSoonScreen phase="Phase N" />` instead of being dead links — see the phase notes below. As of Phase 5 that is only `finance/budgets`.
 
 Every built screen is wrapped in `<Screen>` (`src/components/layout/Screen.tsx`), which owns safe-area insets, gutters, pull-to-refresh, and the max content width so a task list doesn't stretch across a 2000px desktop viewport.
 
@@ -41,9 +41,20 @@ Account balances are derived from `ledger_entries` in the client (`useAccountBal
 
 Not yet implemented. The plan: Expo SQLite + Drizzle ORM as the mobile working store, with an outbox/pending-sync queue, client-generated UUIDs, and `sync_conflicts` for anything that can't merge automatically. Web talks to Supabase directly via TanStack Query — no local SQLite on web. The domain model (repository interfaces) is designed now so both layers can share it later; see [OFFLINE_SYNC.md](./OFFLINE_SYNC.md).
 
-### OCR (Phase 5)
+### Extraction engines (Phase 5)
 
-Not yet implemented. Planned `OCRProvider` interface with three backends (ML Kit on native via a **development build**, PDF.js + Tesseract.js in a Web Worker on browser, an optional Edge Function fallback). See [OCR_PIPELINE.md](./OCR_PIPELINE.md).
+The `OCRProvider` interface (`src/services/ocr/`) is implemented, and so is the whole pipeline behind it: parse → validate → reconcile → match → review → confirm. What differs from the original design is which _engines_ exist.
+
+Only the **delimited-text engine** is implemented. It reads CSV/TSV statement exports, which is what Nepali banks, wallets and co-operatives actually offer, and it needs no native module and no extra dependency.
+
+**ML Kit and Tesseract are deliberately registered as unavailable** rather than half-built:
+
+- ML Kit needs native modules and therefore a development build. This project is pinned to SDK 54 _specifically_ so it runs in Expo Go (see [AGENTS.md](./AGENTS.md)) — a provider that always throws at runtime would be worse than one that states its requirement up front.
+- Tesseract.js + PDF.js would add megabytes of web-only dependency and a worker pipeline for a capability that does nothing on the platform this app is developed against.
+
+Both report an `availability()` reason that the Scan screen renders verbatim, so the app explains the gap instead of failing mysteriously — and implementing either later is a change to one file, not to any call site.
+
+**The safety property that matters:** extraction writes only to the `extracted_*` staging tables. The single path into `financial_transactions` is `useConfirmExtractedRow`, which runs only from an explicit user action, and records `confirmed_financial_transaction_id` back on the staged row so every imported transaction stays traceable to the file it came from. See [OCR_PIPELINE.md](./OCR_PIPELINE.md).
 
 ## A sharp TypeScript edge (worth knowing before touching `src/types/database.ts`)
 
@@ -56,7 +67,7 @@ Phases match the spec's required order. Each phase must typecheck, lint, and pas
 1. ~~**Foundation**~~ (done) — project setup, design system, Supabase client, auth, env validation, full DB schema + RLS, responsive nav shell, profile/settings, biometric+PIN app lock, error boundary, logging.
 2. ~~**Daily life**~~ (done) — dashboard, tasks, planner, habits, notes, calendar, cross-feature search. Local notification _scheduling_ is deferred to Phase 7 alongside the rest of the delivery work; the preference toggles already exist.
 3. ~~**Finance**~~ (done) — accounts with derived balances, ledger-backed income/expense/transfer, categories, counterparties, monthly reports. Multi-currency transactions (a transaction whose accounts don't share a currency) need per-leg exchange rates and land in Phase 4.
-4. **Loans & investments** — People module, lending/borrowing, repayments, investments, savings goals, net worth, multi-currency conversion.
-5. **Documents & extraction** — document vault, OCR abstraction, statement parsing, review queue, reconciliation.
+4. ~~**Loans & investments**~~ (done) — People module, lending/borrowing, repayments, investments, savings goals, net worth, multi-currency conversion.
+5. ~~**Documents & extraction**~~ (done) — document vault, extraction-engine abstraction, delimited statement parsing, review queue, reconciliation, duplicate and counterparty matching. **Image and PDF OCR are registered but not implemented** — see below.
 6. **Sync & exports** — offline SQLite engine, outbox queue, conflict handling, CSV/JSON/PDF exports.
 7. **Deployment & hardening** — Vercel, Resend, security headers, full test pass, accessibility/performance review.

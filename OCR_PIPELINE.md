@@ -1,6 +1,14 @@
 # OCR & Statement Extraction Pipeline
 
-**Status: not yet implemented.** This document is the design for Phase 5 ("Documents and extraction"), written now so the schema (already migrated — see [DATABASE.md](./DATABASE.md)) and the eventual implementation agree on the contract. Nothing in this document describes running code yet.
+**Status: implemented, with one engine.** The pipeline below is built and running (`src/services/ocr/`, `src/features/imports/`, `src/features/documents/`). What is _not_ built is image and PDF text recognition.
+
+- **Delimited text (CSV/TSV) — implemented.** This is what Nepali banks, wallets and co-operatives actually export, and it needs no native module.
+- **ML Kit (native) — registered, unavailable.** Requires an Expo development build; this project is pinned to SDK 54 precisely so it runs in Expo Go (see [AGENTS.md](./AGENTS.md)).
+- **Tesseract.js / PDF.js (web) — registered, unavailable.** Megabytes of web-only dependency for a capability that does nothing on the platform this app is developed against.
+
+The unavailable providers return an `availability()` reason that the Scan screen renders verbatim, so the app explains the gap rather than failing mysteriously, and adding a real implementation later touches one file rather than every call site.
+
+Steps 7 and 14 below (PDF text detection, per-field OCR confidence from bounding boxes) are therefore the parts still outstanding; everything else — mapping, normalisation, reconciliation, duplicate detection, counterparty matching, the review queue and the confirmation path — is live and unit-tested.
 
 ## Provider interface
 

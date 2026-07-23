@@ -282,6 +282,15 @@ export default function SettingsScreen() {
         </Section>
       ) : null}
 
+      <Section title="Data & sync">
+        <Button label="Data & backup" variant="secondary" onPress={() => router.push('/settings/data')} />
+        <Button
+          label="Sync & notifications"
+          variant="secondary"
+          onPress={() => router.push('/settings/sync')}
+        />
+      </Section>
+
       <Section title="Account">
         <Button label="Sign out" variant="secondary" onPress={handleSignOut} loading={isSigningOut} />
       </Section>

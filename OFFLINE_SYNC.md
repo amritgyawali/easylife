@@ -1,6 +1,6 @@
 # Offline & Sync
 
-**Status: not yet implemented.** This document is the design for Phase 6 ("Synchronisation and exports"), written now because the schema decisions it depends on (soft deletion, `version`, `device_id` columns — see [DATABASE.md](./DATABASE.md)) are already in place. Web already works "live" against Supabase directly via TanStack Query; this document describes the mobile offline-first engine specifically.
+**Status (Phase 6):** the conflict-resolution rules and the outbox queue model are implemented as pure, unit-tested engines (`src/features/sync/conflict.ts`, `src/features/sync/outbox.ts`), the server-side conflict log and notifications are surfaced in a "Sync & notifications" screen, and data **exports/backups** are fully working end-to-end (`src/features/export/*`, Settings → Data & backup). What remains for a later pass is wiring those engines to a real mobile SQLite working store and a background drain loop — the web app runs live against Supabase and needs neither. The schema decisions this design depends on (soft deletion, `version`, `device_id` columns — see [DATABASE.md](./DATABASE.md)) were already in place from Phase 1.
 
 ## Why the working store is local SQLite on mobile
 

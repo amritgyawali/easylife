@@ -4,20 +4,22 @@ A free-first personal life-management app — schedule, tasks, habits, notes, fi
 
 The product name is configurable in one place: `src/constants/app.ts` (`APP_NAME`).
 
-> **Status:** Phases 1–5 are complete against a real Supabase project.
+> **Status:** Phases 1–7 are complete against a real Supabase project.
 >
 > - **Phase 1 (Foundation)** — auth, onboarding, the full database schema + RLS, the responsive navigation shell, settings, biometric/PIN app lock.
 > - **Phase 2 (Daily life)** — dashboard, Today, planner/tasks, habits with streaks, notes, calendar agenda, and cross-feature search.
 > - **Phase 3 (Finance)** — accounts with ledger-derived balances, double-entry income/expense/transfer posting, categories, counterparties, and monthly reports.
 > - **Phase 4 (Loans & investments)** — People with net positions, loans with event-derived balances, investments with manual valuations, savings goals, cross-module net worth, and multi-currency transactions with user-recorded exchange rates.
 > - **Phase 5 (Documents & extraction)** — private document vault with content-hash deduplication, CSV/TSV statement import with per-bank column mapping, reconciliation, duplicate and counterparty matching, and a review queue.
+> - **Phase 6 (Sync & exports)** — CSV transaction export and full-account JSON backup (Settings → Data & backup), plus the offline conflict-resolution and outbox engines as pure, unit-tested modules and a "Sync & notifications" screen for resolving cross-device conflicts.
+> - **Phase 7 (Deployment & hardening)** — `vercel.json` with security headers (CSP scoped to Supabase, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and immutable-asset cache rules; the web export builds cleanly to `dist/`.
 >
 > **Two deliberate gaps, both stated in the app itself:**
 >
 > - **Photo and PDF text recognition are not implemented.** ML Kit needs an Expo development build and cannot run in Expo Go, which this project is pinned to SDK 54 for; Tesseract.js/PDF.js would add a large web-only dependency. Both engines are registered as unavailable with an explanation the Scan screen shows. CSV statement import works fully. See [ARCHITECTURE.md](./ARCHITECTURE.md#extraction-engines-phase-5).
 > - **Budgets** remain a placeholder.
 >
-> Everything else is wired end-to-end. Phases 6 (offline sync, exports) and 7 (deployment, hardening) are not started — see [ARCHITECTURE.md](./ARCHITECTURE.md) for the plan.
+> Everything else is wired end-to-end. The remaining offline-sync work is wiring the tested conflict/outbox engines to a mobile SQLite working store and a background drain loop — the web app runs live against Supabase and needs neither; see [OFFLINE_SYNC.md](./OFFLINE_SYNC.md).
 
 ## Prerequisites
 

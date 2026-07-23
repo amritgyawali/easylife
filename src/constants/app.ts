@@ -6,6 +6,9 @@
 
 export const APP_NAME = process.env.EXPO_PUBLIC_APP_NAME ?? 'Amrit LifeOS';
 
+/** Product version, stamped into exports/backups so a file records what wrote it. */
+export const APP_VERSION = '1.0.0';
+
 export const APP_URL = process.env.EXPO_PUBLIC_APP_URL ?? 'http://localhost:8081';
 
 export const APP_SCHEME = 'amritlifeos';

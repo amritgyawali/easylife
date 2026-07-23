@@ -9,6 +9,7 @@ import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
 import { DESKTOP_BREAKPOINT, MOBILE_TABS, SIDEBAR_ITEMS, type NavItem } from '@/constants/navigation';
 import { APP_NAME } from '@/constants/app';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { OfflineBanner } from '@/components/layout/OfflineBanner';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
@@ -61,7 +62,10 @@ function DesktopShell({ children }: PropsWithChildren) {
           </View>
         </ScrollView>
       </View>
-      <View style={{ flex: 1 }}>{children}</View>
+      <View style={{ flex: 1 }}>
+        <OfflineBanner />
+        <View style={{ flex: 1 }}>{children}</View>
+      </View>
     </View>
   );
 }
@@ -108,6 +112,7 @@ function MobileShell({ children }: PropsWithChildren) {
 
   return (
     <View style={{ flex: 1 }}>
+      <OfflineBanner />
       <View style={{ flex: 1 }}>{children}</View>
       <View
         style={{

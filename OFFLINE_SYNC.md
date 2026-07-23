@@ -1,6 +1,14 @@
 # Offline & Sync
 
-**Status (Phase 6):** the conflict-resolution rules and the outbox queue model are implemented as pure, unit-tested engines (`src/features/sync/conflict.ts`, `src/features/sync/outbox.ts`), the server-side conflict log and notifications are surfaced in a "Sync & notifications" screen, and data **exports/backups** are fully working end-to-end (`src/features/export/*`, Settings → Data & backup). What remains for a later pass is wiring those engines to a real mobile SQLite working store and a background drain loop — the web app runs live against Supabase and needs neither. The schema decisions this design depends on (soft deletion, `version`, `device_id` columns — see [DATABASE.md](./DATABASE.md)) were already in place from Phase 1.
+**Status (Phase 6 — live offline engine):** the app now works with **no connection at all** and syncs on reconnect. Concretely:
+
+- **Offline reads (everywhere).** The TanStack Query cache is persisted to device storage (`src/services/offline/persister.ts`, AsyncStorage on native and web) and rehydrated on launch, so every screen the user has visited opens instantly against their real data with zero network. The Supabase auth session already persists (SecureStore/AsyncStorage), so a signed-in user stays signed in offline.
+- **Trustworthy connectivity.** `src/services/offline/online-manager.ts` drives TanStack's `onlineManager` from NetInfo on native (treating "connected but no internet" as offline) and `navigator.onLine` on web — one source of truth for the whole data layer.
+- **Offline writes queue and auto-sync.** While offline, mutations are _paused_ by TanStack (never dropped). The moment connectivity returns they resume automatically and are pushed to Supabase; `resumePausedMutations()` also runs after cache rehydration on launch.
+- **Never silent.** `OfflineBanner` (in `AppShell`) always shows the state: offline (work saved locally), syncing N changes, or nothing when everything is up to date. The "Sync & notifications" screen resolves cross-device conflicts.
+- **Conflict rules & outbox model** remain as pure, unit-tested engines (`src/features/sync/conflict.ts`, `src/features/sync/outbox.ts`); financial rows never auto-merge. Data **exports/backups** are fully working (`src/features/export/*`, Settings → Data & backup).
+
+**What is still a hardening step:** durable replay of _writes made while offline across a full app restart_ for every feature. TanStack persists query data but not in-flight mutations (a paused mutation can't carry its function across a reload), so a change made offline and then hard-closed before reconnecting is not yet replayed on next launch. The tested outbox engine (`outbox.ts`) is the intended mechanism for that — persisting each mutation as a keyed, self-contained record and draining it on reconnect. Within a session (lose signal → keep working → regain signal) sync is fully automatic today. The schema decisions this depends on (soft deletion, `version`, `device_id` — see [DATABASE.md](./DATABASE.md)) were in place from Phase 1.
 
 ## Why the working store is local SQLite on mobile
 

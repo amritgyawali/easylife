@@ -10,6 +10,7 @@ import { DESKTOP_BREAKPOINT, MOBILE_TABS, SIDEBAR_ITEMS, type NavItem } from '@/
 import { APP_NAME } from '@/constants/app';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
+import { QuickAddButton } from '@/components/layout/QuickAddButton';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
@@ -28,7 +29,12 @@ export function AppShell({ children }: PropsWithChildren) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= DESKTOP_BREAKPOINT;
 
-  return isDesktop ? <DesktopShell>{children}</DesktopShell> : <MobileShell>{children}</MobileShell>;
+  return (
+    <View style={{ flex: 1 }}>
+      {isDesktop ? <DesktopShell>{children}</DesktopShell> : <MobileShell>{children}</MobileShell>}
+      <QuickAddButton />
+    </View>
+  );
 }
 
 function DesktopShell({ children }: PropsWithChildren) {

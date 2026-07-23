@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
@@ -13,6 +13,8 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { useTheme } from '@/hooks/useTheme';
 import { configureOnlineManager } from '@/services/offline/online-manager';
 import { persistOptions } from '@/services/offline/persister';
+import { initOutbox } from '@/services/offline/outbox-store';
+import { startSyncRunner } from '@/services/offline/sync-runner';
 
 // Point TanStack's connectivity source at real device network state before any
 // query or mutation runs (see online-manager.ts). Module scope so it happens
@@ -63,6 +65,17 @@ export default function RootLayout() {
 
 function ThemedRoot() {
   const theme = useTheme();
+  const queryClient = useQueryClient();
+
+  // Load any writes left queued from a previous session, then start draining
+  // them to Supabase (on reconnect, on queue changes, and on a slow interval).
+  useEffect(() => {
+    let stop = () => {};
+    void initOutbox().then(() => {
+      stop = startSyncRunner(queryClient);
+    });
+    return () => stop();
+  }, [queryClient]);
 
   return (
     <ThemedView style={{ flex: 1 }}>

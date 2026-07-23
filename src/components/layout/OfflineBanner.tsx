@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useIsOnline, usePendingSyncCount } from '@/services/offline/online-manager';
+import { useOutboxCount } from '@/services/offline/outbox-store';
 
 /**
  * The honest, always-visible status line for the offline engine.
@@ -21,7 +22,9 @@ export function OfflineBanner() {
   const theme = useTheme();
   const online = useIsOnline();
   const queryClient = useQueryClient();
-  const pending = usePendingSyncCount(queryClient);
+  // Both queued write paths: durable outbox entries (quick-add) and TanStack's
+  // in-memory paused mutations (the existing edit screens).
+  const pending = usePendingSyncCount(queryClient) + useOutboxCount();
 
   if (online && pending === 0) return null;
 

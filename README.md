@@ -13,13 +13,14 @@ The product name is configurable in one place: `src/constants/app.ts` (`APP_NAME
 > - **Phase 5 (Documents & extraction)** — private document vault with content-hash deduplication, CSV/TSV statement import with per-bank column mapping, reconciliation, duplicate and counterparty matching, and a review queue.
 > - **Phase 6 (Sync & exports)** — a live offline-first layer: the query cache is persisted to device storage so the app is fully usable with no connection, writes made offline queue and auto-sync to Supabase on reconnect, and an always-visible banner reports the state. Plus CSV transaction export and full-account JSON backup (Settings → Data & backup), the conflict-resolution and outbox engines as pure unit-tested modules, and a "Sync & notifications" screen for resolving cross-device conflicts.
 > - **Phase 7 (Deployment & hardening)** — `vercel.json` with security headers (CSP scoped to Supabase, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and immutable-asset cache rules; the web export builds cleanly to `dist/`.
+> - **Quick add + durable offline capture** — a floating ＋ on every screen captures a task or note in two taps; captures write through a persisted outbox so they appear instantly, survive a full app restart, and sync to Supabase on reconnect (idempotent, keyed on the client-generated id).
 >
 > **Two deliberate gaps, both stated in the app itself:**
 >
 > - **Photo and PDF text recognition are not implemented.** ML Kit needs an Expo development build and cannot run in Expo Go, which this project is pinned to SDK 54 for; Tesseract.js/PDF.js would add a large web-only dependency. Both engines are registered as unavailable with an explanation the Scan screen shows. CSV statement import works fully. See [ARCHITECTURE.md](./ARCHITECTURE.md#extraction-engines-phase-5).
 > - **Budgets** remain a placeholder.
 >
-> Everything else is wired end-to-end. Offline reads, offline-write queuing, and auto-sync on reconnect all work today; the one remaining hardening step is durable replay of offline writes across a full app restart (see [OFFLINE_SYNC.md](./OFFLINE_SYNC.md)).
+> Everything else is wired end-to-end. Offline reads, offline-write queuing, and auto-sync on reconnect all work today, and quick-add captures are durable across a full restart; generalising that restart-durability to the detailed edit screens is the one remaining hardening step (see [OFFLINE_SYNC.md](./OFFLINE_SYNC.md)).
 
 ## Prerequisites
 

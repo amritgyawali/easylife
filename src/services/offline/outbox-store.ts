@@ -5,6 +5,7 @@ import {
   enqueue as enqueuePure,
   markFailed,
   markSynced,
+  repairQuickAddSource,
   type Mutation,
   type OutboxEntry,
 } from '@/features/sync/outbox';
@@ -48,7 +49,16 @@ export async function initOutbox(): Promise<void> {
   if (loaded) return;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (raw) queue = JSON.parse(raw) as OutboxEntry[];
+    if (raw) {
+      const stored = JSON.parse(raw) as OutboxEntry[];
+      const needsRepair = stored.some(
+        (entry) => entry.entityType === 'tasks' && entry.payload.source === 'quick_add'
+      );
+      queue = needsRepair ? repairQuickAddSource(stored) : stored;
+      // Persist the repair so a permanently-broken entry from before the fix
+      // isn't silently re-read (and re-failed) on every future launch.
+      if (needsRepair) void persist();
+    }
   } catch (error) {
     logger.error('offline.outbox_load_failed', error);
   }

@@ -51,7 +51,11 @@ export function useQuickAdd() {
       actual_minutes: null,
       parent_task_id: null,
       waiting_for: null,
-      source: 'quick_add',
+      // 'quick_add' is not one of the values the DB's `source` check
+      // constraint allows ('manual' | 'quick_entry' | 'recurrence') — using
+      // it here made every quick-added task fail its outbox sync forever
+      // (see offline.sync_entry_failed in sync-runner.ts).
+      source: 'quick_entry',
       completed_at: null,
       cancelled_at: null,
       archived_at: null,
@@ -77,7 +81,7 @@ export function useQuickAdd() {
         status: 'inbox',
         priority,
         due_date: dueDate,
-        source: 'quick_add',
+        source: 'quick_entry',
       },
     });
 

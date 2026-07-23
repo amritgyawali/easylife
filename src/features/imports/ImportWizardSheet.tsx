@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { spacing } from '@/constants/theme';
@@ -49,7 +49,7 @@ const ROLE_OPTIONS: { value: ColumnRole; label: string }[] = [
  */
 export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) {
   const router = useRouter();
-  const { pickDocument } = useFilePicker();
+  const { pickDocument, pickPhoto } = useFilePicker();
   const { data: accounts } = useAccounts();
   const { data: counterparties } = useCounterparties();
   const { data: transactions } = useTransactions();
@@ -69,6 +69,11 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
 
   async function handlePick() {
     const picked = await pickDocument();
+    if (picked) await wizard.load(picked);
+  }
+
+  async function handleCapture(fromCamera: boolean) {
+    const picked = await pickPhoto(fromCamera);
     if (picked) await wizard.load(picked);
   }
 
@@ -154,36 +159,50 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
         onClose();
       }}
       footer={
-        <View style={{ flex: 1 }}>
-          {wizard.preview ? (
+        wizard.preview ? (
+          <View style={{ flex: 1 }}>
             <Button
               label="Stage for review"
               loading={saveExtraction.isPending || uploadDocument.isPending}
               fullWidth
               onPress={() => void handleSave()}
             />
-          ) : wizard.table ? (
+          </View>
+        ) : wizard.table ? (
+          <View style={{ flex: 1 }}>
             <Button label="Preview" fullWidth onPress={handleAnalyse} />
-          ) : (
-            <Button
-              label="Choose file"
-              loading={wizard.isReading}
-              fullWidth
-              onPress={() => void handlePick()}
-            />
-          )}
-        </View>
+          </View>
+        ) : null
       }
     >
       {!wizard.table ? (
         <>
           <ThemedText variant="body">
-            Export a CSV statement from your bank, wallet or co-operative and choose it here.
+            Photograph or choose a photo of a statement page, choose a CSV/PDF export, or choose an image
+            straight from your files — text is read automatically and turned into a table below.
           </ThemedText>
           <ThemedText variant="caption" tone="muted">
-            PDF and photo statements need on-device text recognition, which is not available in this build —
-            see the note on the Scan screen.
+            Works best on a clear, flat photo of a printed transaction table. A single receipt won&apos;t have
+            rows to find — use Scan → File a document for those instead.
           </ThemedText>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {Platform.OS !== 'web' ? (
+              <Button
+                label="Take photo"
+                variant="secondary"
+                loading={wizard.isReading}
+                onPress={() => void handleCapture(true)}
+              />
+            ) : null}
+            <Button
+              label="Choose photo"
+              variant="secondary"
+              loading={wizard.isReading}
+              onPress={() => void handleCapture(false)}
+            />
+            <Button label="Choose file" loading={wizard.isReading} onPress={() => void handlePick()} />
+          </View>
         </>
       ) : null}
 

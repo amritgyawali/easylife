@@ -91,7 +91,12 @@ export function useImportWizard() {
       const parsed = parseDelimited(text, headerPattern);
 
       if (parsed.header.length === 0) {
-        throw new AppError('unsupported_document', 'No table could be found in that file.');
+        throw new AppError(
+          'unsupported_document',
+          provider.engine === 'server_fallback'
+            ? "No transaction table was found in that photo. This works best on a clear, flat photo of a bank or wallet statement page — for a single receipt, use Scan → File a document instead."
+            : 'No table could be found in that file.'
+        );
       }
 
       setFile(picked);

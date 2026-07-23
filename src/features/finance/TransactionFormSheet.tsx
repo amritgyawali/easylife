@@ -72,6 +72,15 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
     setErrors({});
   }, [visible, today, defaultAccountId, accounts]);
 
+  // A transfer needs somewhere to go, so it only makes sense once a second
+  // account exists. Without this guard the "To" picker rendered with zero
+  // options and the form had no way to explain why Save kept failing.
+  const canTransfer = (accounts?.length ?? 0) >= 2;
+
+  useEffect(() => {
+    if (visible && kind === 'transfer' && !canTransfer) setKind('expense');
+  }, [visible, kind, canTransfer]);
+
   const selectedAccount = accounts?.find((account) => account.id === accountId);
   const currency = selectedAccount?.currency ?? 'NPR';
 
@@ -125,6 +134,9 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
     label: `${account.name} (${account.currency})`,
   }));
 
+  const destinationOptions = accountOptions.filter((option) => option.value !== accountId);
+  const kindOptions = canTransfer ? KIND_OPTIONS : KIND_OPTIONS.filter((option) => option.value !== 'transfer');
+
   return (
     <FormSheet
       visible={visible}
@@ -142,7 +154,7 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
       }
     >
       <OptionGroup
-        options={KIND_OPTIONS}
+        options={kindOptions}
         value={kind}
         onChange={(value) => {
           setKind(value);
@@ -150,6 +162,11 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
           setCategoryId('');
         }}
       />
+      {!canTransfer ? (
+        <ThemedText variant="caption" tone="muted">
+          Add a second account to move money between accounts.
+        </ThemedText>
+      ) : null}
 
       <MoneyField
         label="Amount"
@@ -186,15 +203,22 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
 
       {kind === 'transfer' ? (
         <>
-          <OptionGroup
-            label="To"
-            options={accountOptions.filter((option) => option.value !== accountId)}
-            value={destinationAccountId}
-            onChange={(value) => {
-              setDestinationAccountId(value);
-              setErrors((current) => ({ ...current, destination: undefined }));
-            }}
-          />
+          {destinationOptions.length === 0 ? (
+            <ThemedText variant="body" tone="negative">
+              Choose a &quot;From&quot; account first, or add another account — there&apos;s nothing left to
+              transfer to.
+            </ThemedText>
+          ) : (
+            <OptionGroup
+              label="To"
+              options={destinationOptions}
+              value={destinationAccountId}
+              onChange={(value) => {
+                setDestinationAccountId(value);
+                setErrors((current) => ({ ...current, destination: undefined }));
+              }}
+            />
+          )}
           {errors.destination ? (
             <ThemedText variant="caption" tone="negative">
               {errors.destination}

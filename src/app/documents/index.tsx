@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 
 import { spacing } from '@/constants/theme';
@@ -12,34 +12,18 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
-import { TextField } from '@/components/forms/TextField';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { OptionGroup } from '@/components/forms/OptionGroup';
-import { DateField } from '@/components/forms/DateField';
-import { useToday } from '@/hooks/useToday';
 import { toUserMessage } from '@/utils/errors';
-import { formatIsoDate, type IsoDate } from '@/utils/date';
-import type { DocumentType } from '@/types/database';
+import { formatIsoDate } from '@/utils/date';
 import {
   useDeleteDocument,
   useDocuments,
-  useUploadDocument,
   signedUrlFor,
   type DocumentRow,
   type PickedFile,
 } from '@/features/documents/api';
 import { useFilePicker } from '@/features/documents/use-file-picker';
-
-const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
-  { value: 'bank_statement', label: 'Statement' },
-  { value: 'receipt', label: 'Receipt' },
-  { value: 'invoice', label: 'Invoice' },
-  { value: 'identity', label: 'Identity' },
-  { value: 'certificate', label: 'Certificate' },
-  { value: 'contract', label: 'Contract' },
-  { value: 'other', label: 'Other' },
-];
+import { UploadSheet } from '@/features/documents/UploadSheet';
 
 /** The document vault: private storage, deduplicated by file hash. */
 export default function DocumentsScreen() {
@@ -170,97 +154,5 @@ export default function DocumentsScreen() {
 
       <UploadSheet file={pickedFile} onClose={() => setPickedFile(null)} />
     </Screen>
-  );
-}
-
-function UploadSheet({ file, onClose }: { file: PickedFile | null; onClose: () => void }) {
-  const { today } = useToday();
-  const uploadDocument = useUploadDocument();
-
-  const [title, setTitle] = useState('');
-  const [documentType, setDocumentType] = useState<DocumentType>('bank_statement');
-  const [institution, setInstitution] = useState('');
-  const [documentDate, setDocumentDate] = useState<IsoDate | null>(null);
-  const [duplicateNotice, setDuplicateNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!file) return;
-    setTitle(file.name);
-    setDocumentType('bank_statement');
-    setInstitution('');
-    setDocumentDate(null);
-    setDuplicateNotice(null);
-  }, [file]);
-
-  if (!file) return null;
-
-  async function handleUpload() {
-    if (!file) return;
-
-    const result = await uploadDocument.mutateAsync({
-      file,
-      title,
-      documentType,
-      institution,
-      documentDate,
-    });
-
-    if (result.wasDuplicate) {
-      // Not an error: the file is already safely stored, and telling the user
-      // that is more useful than silently closing as if something happened.
-      setDuplicateNotice(`Already stored as "${result.document.title}" — nothing was uploaded again.`);
-      return;
-    }
-
-    onClose();
-  }
-
-  return (
-    <FormSheet
-      visible
-      title="Add to vault"
-      onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button
-            label={duplicateNotice ? 'Done' : 'Upload'}
-            loading={uploadDocument.isPending}
-            fullWidth
-            onPress={duplicateNotice ? onClose : () => void handleUpload()}
-          />
-        </View>
-      }
-    >
-      <ThemedText variant="caption" tone="muted">
-        {file.name} · {(file.size / 1024).toFixed(0)} KB · {file.mimeType}
-      </ThemedText>
-
-      <TextField label="Title" value={title} onChangeText={setTitle} autoFocus />
-      <OptionGroup
-        label="Type"
-        options={DOCUMENT_TYPE_OPTIONS}
-        value={documentType}
-        onChange={setDocumentType}
-      />
-      <TextField
-        label="Institution"
-        value={institution}
-        onChangeText={setInstitution}
-        placeholder="Optional — which bank or wallet"
-      />
-      <DateField label="Document date" value={documentDate} onChange={setDocumentDate} today={today} />
-
-      {duplicateNotice ? (
-        <ThemedText variant="body" tone="warning" accessibilityLiveRegion="polite">
-          {duplicateNotice}
-        </ThemedText>
-      ) : null}
-
-      {uploadDocument.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(uploadDocument.error)}
-        </ThemedText>
-      ) : null}
-    </FormSheet>
   );
 }

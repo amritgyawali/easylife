@@ -5,6 +5,7 @@ import {
   markFailed,
   markSynced,
   pendingCount,
+  repairQuickAddSource,
   type OutboxEntry,
 } from '@/features/sync/outbox';
 
@@ -123,5 +124,42 @@ describe('retry scheduling', () => {
 
   it('markSynced removes the entry', () => {
     expect(markSynced(seed, 'tasks', 't1')).toHaveLength(0);
+  });
+});
+
+describe('repairQuickAddSource', () => {
+  const stuck: OutboxEntry = {
+    entityType: 'tasks',
+    entityId: 't1',
+    op: 'insert',
+    payload: { title: 'Buy milk', source: 'quick_add' },
+    status: 'failed',
+    attempts: 4,
+    nextAttemptAt: T0 + 60_000,
+    updatedAt: T0,
+  };
+
+  it('rewrites the invalid source and clears backoff so it retries immediately', () => {
+    const [repaired] = repairQuickAddSource([stuck]);
+    expect(repaired!.payload.source).toBe('quick_entry');
+    expect(repaired!.status).toBe('pending');
+    expect(repaired!.attempts).toBe(0);
+    expect(repaired!.nextAttemptAt).toBe(0);
+  });
+
+  it('leaves other entries untouched', () => {
+    const note: OutboxEntry = {
+      entityType: 'notes',
+      entityId: 'n1',
+      op: 'insert',
+      payload: { title: 'Idea' },
+      status: 'pending',
+      attempts: 0,
+      nextAttemptAt: 0,
+      updatedAt: T0,
+    };
+    const okTask: OutboxEntry = { ...stuck, entityId: 't2', payload: { title: 'Fine', source: 'manual' } };
+
+    expect(repairQuickAddSource([note, okTask])).toEqual([note, okTask]);
   });
 });

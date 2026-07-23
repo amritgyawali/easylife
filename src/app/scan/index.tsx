@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Platform, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { spacing } from '@/constants/theme';
@@ -8,109 +8,159 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { IconButton } from '@/components/ui/IconButton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { toUserMessage } from '@/utils/errors';
-import { listProviders } from '@/services/ocr/providers';
-import { useUploadDocument, type PickedFile } from '@/features/documents/api';
+import { formatIsoDate } from '@/utils/date';
+import { useDocuments, signedUrlFor, type PickedFile } from '@/features/documents/api';
 import { useFilePicker } from '@/features/documents/use-file-picker';
+import { UploadSheet } from '@/features/documents/UploadSheet';
+import { ImportWizardSheet } from '@/features/imports/ImportWizardSheet';
+
+const RECENT_SCAN_COUNT = 5;
 
 /**
- * Capture a document.
- *
- * Photographing a receipt and filing it works today. Reading the *text* out
- * of that photo does not, and this screen says so plainly rather than
- * offering a button that fails: on-device recognition needs a development
- * build, and this project is pinned to SDK 54 precisely so it runs in Expo Go
- * (see AGENTS.md). The engine registry is the source of that message, so it
- * corrects itself the day a provider is implemented.
+ * Two distinct jobs live here, and keeping them visually separate matters:
+ * turning a statement photo into reviewable transactions (OCR, via
+ * `ImportWizardSheet`) vs. simply filing a document away (receipt, ID,
+ * certificate — no extraction, just storage). Conflating them is how a
+ * scanned receipt used to end up silently posted nowhere, and how a
+ * statement photo used to have no path to the ledger at all.
  */
 export default function ScanScreen() {
   const router = useRouter();
-  const { pickPhoto } = useFilePicker();
-  const uploadDocument = useUploadDocument();
+  const { pickPhoto, pickDocument } = useFilePicker();
+  const { data: documents } = useDocuments();
 
-  const [status, setStatus] = useState<string | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pickedFile, setPickedFile] = useState<PickedFile | null>(null);
+  const [pickError, setPickError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
-  const unavailable = listProviders().filter((provider) => !provider.availability().available);
+  const recentScans = useMemo(() => (documents ?? []).slice(0, RECENT_SCAN_COUNT), [documents]);
 
-  async function capture(fromCamera: boolean) {
-    setStatus(null);
-
+  async function captureDocument(source: 'camera' | 'library' | 'file') {
+    setPickError(null);
     try {
-      const file: PickedFile | null = await pickPhoto(fromCamera);
-      if (!file) return;
-
-      const result = await uploadDocument.mutateAsync({
-        file,
-        title: file.name,
-        documentType: 'receipt',
-      });
-
-      setStatus(
-        result.wasDuplicate
-          ? 'You had already saved this exact image — nothing was uploaded again.'
-          : 'Saved to your documents.'
-      );
+      const file = source === 'file' ? await pickDocument() : await pickPhoto(source === 'camera');
+      if (file) setPickedFile(file);
     } catch (failure) {
-      setStatus(toUserMessage(failure));
+      setPickError(toUserMessage(failure));
+    }
+  }
+
+  async function openRecentScan(document: (typeof recentScans)[number]) {
+    setOpenError(null);
+    try {
+      const url = await signedUrlFor(document);
+      await Linking.openURL(url);
+    } catch (failure) {
+      setOpenError(toUserMessage(failure));
     }
   }
 
   return (
     <Screen
-      header={<ScreenHeader title="Scan" subtitle="Photograph a receipt or statement and file it away." />}
+      header={
+        <ScreenHeader
+          title="Scan"
+          subtitle="Turn a statement photo into transactions, or file a document away."
+        />
+      }
     >
       <Card style={{ gap: spacing.md }}>
-        <ThemedText variant="subtitle">Capture a document</ThemedText>
+        <ThemedText variant="subtitle">Scan a statement</ThemedText>
         <ThemedText variant="body" tone="muted">
-          The image is stored privately and can be opened from Documents at any time.
+          Photograph or choose a bank or wallet statement page. Text is read automatically and turned into a
+          reviewable table — nothing reaches your ledger until you confirm each row.
         </ThemedText>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <Button label="Start" onPress={() => setWizardOpen(true)} />
+      </Card>
+
+      <Card style={{ gap: spacing.md }}>
+        <ThemedText variant="subtitle">File a document</ThemedText>
+        <ThemedText variant="body" tone="muted">
+          Receipts, invoices, IDs and certificates — stored privately, no extraction. Duplicate photos are
+          recognised and never stored twice.
+        </ThemedText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {Platform.OS !== 'web' ? (
-            <Button
-              label="Take photo"
-              loading={uploadDocument.isPending}
-              onPress={() => void capture(true)}
-            />
+            <Button label="Take photo" onPress={() => void captureDocument('camera')} />
           ) : null}
-          <Button
-            label="Choose photo"
-            variant="secondary"
-            loading={uploadDocument.isPending}
-            onPress={() => void capture(false)}
-          />
+          <Button label="Choose photo" variant="secondary" onPress={() => void captureDocument('library')} />
+          <Button label="Choose file" variant="secondary" onPress={() => void captureDocument('file')} />
         </View>
-        {status ? (
-          <ThemedText variant="caption" tone="muted" accessibilityLiveRegion="polite">
-            {status}
+        {pickError ? (
+          <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
+            {pickError}
           </ThemedText>
         ) : null}
       </Card>
 
-      <Card style={{ gap: spacing.md }}>
-        <ThemedText variant="subtitle">Getting transactions out of a statement</ThemedText>
-        <ThemedText variant="body" tone="muted">
-          Export a CSV from your bank, wallet or co-operative and bring it in through Imports. Every row is
-          reviewed before anything reaches your ledger.
+      {recentScans.length > 0 ? (
+        <View style={{ gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <ThemedText
+              variant="label"
+              tone="muted"
+              weight="semibold"
+              accessibilityRole="header"
+              style={{ flex: 1 }}
+            >
+              RECENT
+            </ThemedText>
+            <Button label="See all" variant="ghost" size="sm" onPress={() => router.push('/documents')} />
+          </View>
+          <Card padded={false}>
+            {recentScans.map((document) => (
+              <View
+                key={document.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  padding: spacing.md,
+                }}
+              >
+                <View style={{ flex: 1, gap: spacing.xxs }}>
+                  <ThemedText variant="body" numberOfLines={1}>
+                    {document.title}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                    <Badge label={document.document_type.replace(/_/g, ' ')} />
+                    <ThemedText variant="caption" tone="muted">
+                      {formatIsoDate(document.created_at.slice(0, 10))}
+                    </ThemedText>
+                  </View>
+                </View>
+                <IconButton
+                  icon="open-outline"
+                  accessibilityLabel={`Open ${document.title}`}
+                  onPress={() => void openRecentScan(document)}
+                />
+              </View>
+            ))}
+          </Card>
+          {openError ? (
+            <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
+              {openError}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
+
+      <Card style={{ gap: spacing.xs }}>
+        <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
+          FOR BEST RESULTS
         </ThemedText>
-        <Button label="Go to Imports" variant="secondary" onPress={() => router.push('/imports')} />
+        <ThemedText variant="caption" tone="muted">
+          Flat angle, good light, and the whole table in frame. A blurry or angled photo is the most common
+          reason a scan comes back unreadable — retaking it almost always fixes that.
+        </ThemedText>
       </Card>
 
-      {unavailable.length > 0 ? (
-        <Card style={{ gap: spacing.sm }}>
-          <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-            NOT AVAILABLE IN THIS BUILD
-          </ThemedText>
-          {unavailable.map((provider) => (
-            <View key={provider.engine} style={{ gap: spacing.xxs }}>
-              <Badge label={provider.engine.replace(/_/g, ' ')} tone="warning" />
-              <ThemedText variant="caption" tone="muted">
-                {provider.availability().reason}
-              </ThemedText>
-            </View>
-          ))}
-        </Card>
-      ) : null}
+      <ImportWizardSheet visible={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <UploadSheet file={pickedFile} defaultDocumentType="receipt" onClose={() => setPickedFile(null)} />
     </Screen>
   );
 }

@@ -133,6 +133,28 @@ export function markFailed(
   });
 }
 
+/**
+ * One-time repair for entries queued before quick-add's `source` value was
+ * fixed from `'quick_add'` to `'quick_entry'` (the only values the DB's
+ * `tasks.source` check constraint accepts are `manual`/`quick_entry`/
+ * `recurrence`). Those entries could never pass validation and were stuck
+ * retrying forever — see `offline.sync_entry_failed` in sync-runner.ts.
+ * Rewriting the payload and resetting backoff lets them sync on the very
+ * next drain instead of losing the task.
+ */
+export function repairQuickAddSource(queue: readonly OutboxEntry[]): OutboxEntry[] {
+  return queue.map((entry) => {
+    if (entry.entityType !== 'tasks' || entry.payload.source !== 'quick_add') return entry;
+    return {
+      ...entry,
+      payload: { ...entry.payload, source: 'quick_entry' },
+      status: 'pending',
+      attempts: 0,
+      nextAttemptAt: 0,
+    };
+  });
+}
+
 /** Entries eligible to send right now, oldest-queued first. */
 export function dueEntries(queue: readonly OutboxEntry[], now: number): OutboxEntry[] {
   return queue.filter((entry) => entry.nextAttemptAt <= now).sort((a, b) => a.updatedAt - b.updatedAt);

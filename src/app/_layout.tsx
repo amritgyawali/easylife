@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Slot } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +12,7 @@ import { EnvGate } from '@/components/layout/EnvGate';
 import { AppLockGate } from '@/components/layout/AppLockGate';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { useTheme } from '@/hooks/useTheme';
+import { APP_NAME } from '@/constants/app';
 import { configureOnlineManager } from '@/services/offline/online-manager';
 import { persistOptions } from '@/services/offline/persister';
 import { initOutbox } from '@/services/offline/outbox-store';
@@ -79,6 +81,12 @@ function ThemedRoot() {
 
   return (
     <ThemedView style={{ flex: 1 }}>
+      {/* Set via Helmet (expo-router/head) rather than a static <title> in
+          +html.tsx — Helmet takes exclusive ownership of the <title> element
+          on hydration and would blank a title set only in the static HTML. */}
+      <Head>
+        <title>{APP_NAME}</title>
+      </Head>
       <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       <AppLockGate>
         <Slot />

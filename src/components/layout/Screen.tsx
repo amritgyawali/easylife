@@ -15,6 +15,14 @@ export interface ScreenProps extends PropsWithChildren {
 }
 
 /**
+ * Extra bottom padding reserved on every scrollable screen so the floating
+ * quick-add button (56px, plus its own margin) never sits on top of the last
+ * row of a list — without this the bottom item of most task/note/transaction
+ * lists was unreachable/hidden behind the FAB on phones.
+ */
+const FAB_CLEARANCE = 88;
+
+/**
  * Standard page container for every feature screen: safe-area insets, the
  * themed background, consistent gutters, and optional pull-to-refresh.
  *
@@ -41,6 +49,7 @@ export function Screen({ header, onRefresh, refreshing = false, scrollable = tru
           contentContainerStyle={{
             padding: spacing.lg,
             paddingTop: header ? 0 : spacing.lg,
+            paddingBottom: spacing.lg + FAB_CLEARANCE,
             gap: spacing.lg,
           }}
           keyboardShouldPersistTaps="handled"
@@ -51,7 +60,16 @@ export function Screen({ header, onRefresh, refreshing = false, scrollable = tru
           {body}
         </ScrollView>
       ) : (
-        <View style={{ flex: 1, padding: spacing.lg, paddingTop: header ? 0 : spacing.lg }}>{body}</View>
+        <View
+          style={{
+            flex: 1,
+            padding: spacing.lg,
+            paddingTop: header ? 0 : spacing.lg,
+            paddingBottom: spacing.lg + FAB_CLEARANCE,
+          }}
+        >
+          {body}
+        </View>
       )}
     </SafeAreaView>
   );

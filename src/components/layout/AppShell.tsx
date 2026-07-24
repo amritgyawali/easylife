@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import { useState, type PropsWithChildren } from 'react';
 import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,11 +6,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
 import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
-import { DESKTOP_BREAKPOINT, MOBILE_TABS, SIDEBAR_ITEMS, type NavItem } from '@/constants/navigation';
+import {
+  DESKTOP_BREAKPOINT,
+  MOBILE_TABS,
+  MORE_MENU_ITEMS,
+  SIDEBAR_ITEMS,
+  type NavItem,
+} from '@/constants/navigation';
 import { APP_NAME } from '@/constants/app';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { QuickAddButton } from '@/components/layout/QuickAddButton';
+import { MoreMenuSheet } from '@/components/layout/MoreMenuSheet';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
@@ -115,6 +122,11 @@ function MobileShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // "More" is active whenever the current route is one of the overflow
+  // screens, so the tab still reflects where you are after the sheet closes.
+  const inMoreSection = MORE_MENU_ITEMS.some((item) => isActive(pathname, item.href));
 
   return (
     <View style={{ flex: 1 }}>
@@ -162,7 +174,36 @@ function MobileShell({ children }: PropsWithChildren) {
             </Pressable>
           );
         })}
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: inMoreSection }}
+          accessibilityLabel="More"
+          onPress={() => setMoreOpen(true)}
+          style={{
+            flex: 1,
+            minHeight: minTouchTarget + spacing.sm,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            paddingVertical: spacing.xs,
+          }}
+        >
+          <Ionicons
+            name="menu-outline"
+            size={22}
+            color={inMoreSection ? theme.colors.primary : theme.colors.textMuted}
+          />
+          <ThemedText
+            style={{ fontSize: fontSize.xs }}
+            tone={inMoreSection ? 'primary' : 'muted'}
+            weight={inMoreSection ? 'semibold' : 'regular'}
+          >
+            More
+          </ThemedText>
+        </Pressable>
       </View>
+
+      <MoreMenuSheet visible={moreOpen} onClose={() => setMoreOpen(false)} />
     </View>
   );
 }

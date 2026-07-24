@@ -28,7 +28,14 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "name": "Amrit LifeOS",
+      "shortName": "LifeOS",
+      "description": "Personal life and finance management — tasks, habits, notes, and a full ledger, offline-first.",
+      "lang": "en",
+      "themeColor": "#0B5FFF",
+      "backgroundColor": "#F8F9FB",
+      "display": "standalone"
     },
     "plugins": [
       "expo-router",

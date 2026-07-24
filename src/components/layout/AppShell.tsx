@@ -1,18 +1,13 @@
 import { useState, type PropsWithChildren } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
-import {
-  DESKTOP_BREAKPOINT,
-  MOBILE_TABS,
-  MORE_MENU_ITEMS,
-  SIDEBAR_ITEMS,
-  type NavItem,
-} from '@/constants/navigation';
+import { MOBILE_TABS, MORE_MENU_ITEMS, SIDEBAR_ITEMS, type NavItem } from '@/constants/navigation';
 import { APP_NAME } from '@/constants/app';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
@@ -33,12 +28,11 @@ function isActive(pathname: string, href: string): boolean {
  * identical everywhere without coupling unrelated route groups together.
  */
 export function AppShell({ children }: PropsWithChildren) {
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= DESKTOP_BREAKPOINT;
+  const compact = useCompactLayout();
 
   return (
     <View style={{ flex: 1 }}>
-      {isDesktop ? <DesktopShell>{children}</DesktopShell> : <MobileShell>{children}</MobileShell>}
+      {compact ? <MobileShell>{children}</MobileShell> : <DesktopShell>{children}</DesktopShell>}
       <QuickAddButton />
     </View>
   );
@@ -161,11 +155,11 @@ function MobileShell({ children }: PropsWithChildren) {
             >
               <Ionicons
                 name={item.icon}
-                size={22}
+                size={20}
                 color={active ? theme.colors.primary : theme.colors.textMuted}
               />
               <ThemedText
-                style={{ fontSize: fontSize.xs }}
+                style={{ fontSize: fontSize.xs - 1 }}
                 tone={active ? 'primary' : 'muted'}
                 weight={active ? 'semibold' : 'regular'}
               >
@@ -190,11 +184,11 @@ function MobileShell({ children }: PropsWithChildren) {
         >
           <Ionicons
             name="menu-outline"
-            size={22}
+            size={20}
             color={inMoreSection ? theme.colors.primary : theme.colors.textMuted}
           />
           <ThemedText
-            style={{ fontSize: fontSize.xs }}
+            style={{ fontSize: fontSize.xs - 1 }}
             tone={inMoreSection ? 'primary' : 'muted'}
             weight={inMoreSection ? 'semibold' : 'regular'}
           >

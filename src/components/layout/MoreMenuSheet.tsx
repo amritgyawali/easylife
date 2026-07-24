@@ -40,12 +40,12 @@ export function MoreMenuSheet({ visible, onClose }: MoreMenuSheetProps) {
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.md,
-            minHeight: minTouchTarget + spacing.md,
-            paddingHorizontal: spacing.lg,
+            minHeight: minTouchTarget + spacing.xs,
+            paddingHorizontal: spacing.md,
             backgroundColor: pressed ? theme.colors.surfaceAlt : 'transparent',
           })}
         >
-          <Ionicons name={item.icon} size={22} color={theme.colors.textMuted} />
+          <Ionicons name={item.icon} size={20} color={theme.colors.textMuted} />
           <ThemedText variant="body" style={{ flex: 1 }}>
             {item.label}
           </ThemedText>

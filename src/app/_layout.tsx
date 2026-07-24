@@ -12,6 +12,7 @@ import { EnvGate } from '@/components/layout/EnvGate';
 import { AppLockGate } from '@/components/layout/AppLockGate';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { useTheme } from '@/hooks/useTheme';
+import { CompactLayoutProvider } from '@/hooks/useCompactLayout';
 import { APP_NAME } from '@/constants/app';
 import { configureOnlineManager } from '@/services/offline/online-manager';
 import { persistOptions } from '@/services/offline/persister';
@@ -56,7 +57,9 @@ export default function RootLayout() {
         >
           <AuthProvider>
             <SafeAreaProvider>
-              <ThemedRoot />
+              <CompactLayoutProvider>
+                <ThemedRoot />
+              </CompactLayoutProvider>
             </SafeAreaProvider>
           </AuthProvider>
         </PersistQueryClientProvider>

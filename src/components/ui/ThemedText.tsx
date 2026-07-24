@@ -1,6 +1,7 @@
 import { Text, type TextProps } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { fontSize, fontWeight } from '@/constants/theme';
 
 export type TextVariant = 'display' | 'title' | 'subtitle' | 'body' | 'label' | 'caption';
@@ -21,6 +22,15 @@ const VARIANT_SIZE: Record<TextVariant, number> = {
   caption: fontSize.xs,
 };
 
+const COMPACT_VARIANT_SIZE: Record<TextVariant, number> = {
+  display: 31,
+  title: 25,
+  subtitle: 17,
+  body: 15,
+  label: 13,
+  caption: 12,
+};
+
 const VARIANT_DEFAULT_WEIGHT: Record<TextVariant, keyof typeof fontWeight> = {
   display: 'bold',
   title: 'bold',
@@ -38,6 +48,7 @@ const VARIANT_DEFAULT_WEIGHT: Record<TextVariant, keyof typeof fontWeight> = {
  */
 export function ThemedText({ variant = 'body', tone = 'default', weight, style, ...rest }: ThemedTextProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
 
   const toneColor: Record<TextTone, string> = {
     default: theme.colors.text,
@@ -53,7 +64,7 @@ export function ThemedText({ variant = 'body', tone = 'default', weight, style, 
     <Text
       style={[
         {
-          fontSize: VARIANT_SIZE[variant],
+          fontSize: compact ? COMPACT_VARIANT_SIZE[variant] : VARIANT_SIZE[variant],
           fontWeight: fontWeight[weight ?? VARIANT_DEFAULT_WEIGHT[variant]],
           color: toneColor[tone],
         },

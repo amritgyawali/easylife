@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { spacing } from '@/constants/theme';
 
 export interface ScreenProps extends PropsWithChildren {
@@ -32,25 +33,28 @@ const FAB_CLEARANCE = 88;
  */
 export function Screen({ header, onRefresh, refreshing = false, scrollable = true, children }: ScreenProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
+  const gutter = compact ? spacing.md : spacing.lg;
+  const sectionGap = compact ? spacing.md : spacing.lg;
 
   const body = (
-    <View style={{ width: '100%', maxWidth: 900, alignSelf: 'center', gap: spacing.lg }}>{children}</View>
+    <View style={{ width: '100%', maxWidth: 900, alignSelf: 'center', gap: sectionGap }}>{children}</View>
   );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: theme.colors.background }}>
       {header ? (
-        <View style={{ padding: spacing.lg, paddingBottom: spacing.md }}>
+        <View style={{ padding: gutter, paddingBottom: spacing.sm }}>
           <View style={{ width: '100%', maxWidth: 900, alignSelf: 'center', gap: spacing.md }}>{header}</View>
         </View>
       ) : null}
       {scrollable ? (
         <ScrollView
           contentContainerStyle={{
-            padding: spacing.lg,
-            paddingTop: header ? 0 : spacing.lg,
-            paddingBottom: spacing.lg + FAB_CLEARANCE,
-            gap: spacing.lg,
+            padding: gutter,
+            paddingTop: header ? 0 : gutter,
+            paddingBottom: gutter + FAB_CLEARANCE,
+            gap: sectionGap,
           }}
           keyboardShouldPersistTaps="handled"
           refreshControl={
@@ -63,9 +67,9 @@ export function Screen({ header, onRefresh, refreshing = false, scrollable = tru
         <View
           style={{
             flex: 1,
-            padding: spacing.lg,
-            paddingTop: header ? 0 : spacing.lg,
-            paddingBottom: spacing.lg + FAB_CLEARANCE,
+            padding: gutter,
+            paddingTop: header ? 0 : gutter,
+            paddingBottom: gutter + FAB_CLEARANCE,
           }}
         >
           {body}

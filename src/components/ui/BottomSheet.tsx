@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { minTouchTarget, radius, spacing } from '@/constants/theme';
 import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -23,6 +24,7 @@ export interface BottomSheetProps extends PropsWithChildren {
 
 /** Share of the visible viewport a sheet may occupy before its body scrolls. */
 const MAX_HEIGHT_RATIO = 0.9;
+const COMPACT_MAX_HEIGHT_RATIO = 0.84;
 
 /**
  * The one modal shell every bottom sheet in the app is built on.
@@ -58,8 +60,11 @@ export function BottomSheet({
   children,
 }: BottomSheetProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
   const insets = useSafeAreaInsets();
   const visualViewportHeight = useVisualViewportHeight();
+  const sheetSpacing = compact ? spacing.md : spacing.lg;
+  const maxHeightRatio = compact ? COMPACT_MAX_HEIGHT_RATIO : MAX_HEIGHT_RATIO;
 
   // Reason (1). Null on native and on browsers without visualViewport, where
   // filling the parent is already correct.
@@ -67,7 +72,7 @@ export function BottomSheet({
     visualViewportHeight != null ? { width: '100%' as const, height: visualViewportHeight } : { flex: 1 };
 
   // Reason (3). Only the last element carries it, so it is never doubled.
-  const safeBottom = Math.max(spacing.lg, insets.bottom);
+  const safeBottom = Math.max(sheetSpacing, insets.bottom);
 
   return (
     <Modal
@@ -87,7 +92,11 @@ export function BottomSheet({
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ maxHeight: `${MAX_HEIGHT_RATIO * 100}%`, overflow: 'hidden' }}
+          style={{
+            maxHeight: `${maxHeightRatio * 100}%`,
+            marginHorizontal: compact ? spacing.sm : 0,
+            overflow: 'hidden',
+          }}
         >
           {/* Reason (2): shrink to the shell rather than to this content. */}
           <View
@@ -96,8 +105,8 @@ export function BottomSheet({
               minHeight: 0,
               overflow: 'hidden',
               backgroundColor: theme.colors.background,
-              borderTopLeftRadius: radius.xl,
-              borderTopRightRadius: radius.xl,
+              borderTopLeftRadius: compact ? radius.lg : radius.xl,
+              borderTopRightRadius: compact ? radius.lg : radius.xl,
               borderTopWidth: 1,
               borderColor: theme.colors.border,
             }}
@@ -107,7 +116,7 @@ export function BottomSheet({
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: spacing.lg,
+                padding: sheetSpacing,
                 borderBottomWidth: 1,
                 borderBottomColor: theme.colors.border,
               }}
@@ -138,9 +147,9 @@ export function BottomSheet({
                 body === 'flush'
                   ? { paddingBottom: footer ? 0 : safeBottom }
                   : {
-                      padding: spacing.lg,
-                      gap: spacing.lg,
-                      paddingBottom: footer ? spacing.lg : safeBottom,
+                      padding: sheetSpacing,
+                      gap: sheetSpacing,
+                      paddingBottom: footer ? sheetSpacing : safeBottom,
                     }
               }
               keyboardShouldPersistTaps="handled"
@@ -153,7 +162,7 @@ export function BottomSheet({
                 style={{
                   flexDirection: 'row',
                   gap: spacing.md,
-                  padding: spacing.lg,
+                  padding: sheetSpacing,
                   paddingBottom: safeBottom,
                   borderTopWidth: 1,
                   borderTopColor: theme.colors.border,

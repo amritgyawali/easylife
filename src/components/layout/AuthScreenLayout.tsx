@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, View }
 
 import { APP_NAME } from '@/constants/app';
 import { spacing } from '@/constants/theme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
 import { Card } from '@/components/ui/Card';
 import { ThemedView } from '@/components/ui/ThemedView';
@@ -15,8 +16,10 @@ export interface AuthScreenLayoutProps extends PropsWithChildren {
 
 export function AuthScreenLayout({ title, subtitle, children }: AuthScreenLayoutProps) {
   const { width } = useWindowDimensions();
+  const compact = useCompactLayout();
   const visualViewportHeight = useVisualViewportHeight();
-  const cardWidth = Math.min(width - spacing.xl * 2, 420);
+  const pageGutter = compact ? spacing.md : spacing.xl;
+  const cardWidth = Math.min(width - pageGutter * 2, 420);
   const keyboardRegionStyle = visualViewportHeight != null ? { height: visualViewportHeight } : { flex: 1 };
 
   return (
@@ -30,10 +33,10 @@ export function AuthScreenLayout({ title, subtitle, children }: AuthScreenLayout
             flexGrow: 1,
             alignItems: 'center',
             justifyContent: 'center',
-            padding: spacing.xl,
+            padding: pageGutter,
           }}
         >
-          <View style={{ width: cardWidth, gap: spacing.xl }}>
+          <View style={{ width: cardWidth, gap: compact ? spacing.lg : spacing.xl }}>
             <View style={{ alignItems: 'center', gap: spacing.xs }}>
               <ThemedText variant="title" weight="bold">
                 {APP_NAME}

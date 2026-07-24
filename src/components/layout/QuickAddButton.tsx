@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Pressable, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
-import { DESKTOP_BREAKPOINT } from '@/constants/navigation';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { FormSheet } from '@/components/ui/FormSheet';
@@ -26,8 +26,7 @@ type QuickKind = 'task' | 'note';
 export function QuickAddButton() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const isDesktop = width >= DESKTOP_BREAKPOINT;
+  const compact = useCompactLayout();
   const { today } = useToday();
   const { addTask, addNote } = useQuickAdd();
 
@@ -60,7 +59,7 @@ export function QuickAddButton() {
   };
 
   // Clear the mobile tab bar; sit in the normal margin on desktop.
-  const bottom = (isDesktop ? spacing.xl : minTouchTarget + spacing.xl) + insets.bottom;
+  const bottom = (compact ? minTouchTarget + spacing.xl : spacing.xl) + insets.bottom;
 
   return (
     <>

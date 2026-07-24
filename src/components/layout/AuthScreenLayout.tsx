@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, View }
 import { APP_NAME } from '@/constants/app';
 import { spacing } from '@/constants/theme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
+import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { Card } from '@/components/ui/Card';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -17,10 +17,19 @@ export interface AuthScreenLayoutProps extends PropsWithChildren {
 export function AuthScreenLayout({ title, subtitle, children }: AuthScreenLayoutProps) {
   const { width } = useWindowDimensions();
   const compact = useCompactLayout();
-  const visualViewportHeight = useVisualViewportHeight();
+  const visualViewport = useVisualViewport();
   const pageGutter = compact ? spacing.md : spacing.xl;
   const cardWidth = Math.min(width - pageGutter * 2, 420);
-  const keyboardRegionStyle = visualViewportHeight != null ? { height: visualViewportHeight } : { flex: 1 };
+  const keyboardRegionStyle =
+    visualViewport != null
+      ? {
+          position: 'absolute' as const,
+          top: visualViewport.top,
+          left: visualViewport.left,
+          width: visualViewport.width,
+          height: visualViewport.height,
+        }
+      : { flex: 1 };
 
   return (
     <ThemedView style={{ flex: 1 }}>

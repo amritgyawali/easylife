@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { minTouchTarget, radius, spacing } from '@/constants/theme';
-import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
+import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 export interface BottomSheetProps extends PropsWithChildren {
@@ -37,8 +37,8 @@ const COMPACT_MAX_HEIGHT_RATIO = 0.84;
  *    mobile browsers pin to the layout viewport — and that does *not* shrink
  *    when the on-screen keyboard opens. A `flex: 1` scrim therefore keeps its
  *    full pre-keyboard height and pushes the footer (the Save button) below
- *    the fold, behind the keyboard. `useVisualViewportHeight` follows the
- *    actually-visible area instead, so the footer stays reachable while typing.
+ *    the fold, behind the keyboard. `useVisualViewport` follows the complete
+ *    visible rectangle instead, so the footer stays reachable while typing.
  *
  * 2. **The body is the only part allowed to shrink.** Flex children default to
  *    a minimum size of their *content*, so a form taller than the sheet won't
@@ -62,14 +62,22 @@ export function BottomSheet({
   const theme = useTheme();
   const compact = useCompactLayout();
   const insets = useSafeAreaInsets();
-  const visualViewportHeight = useVisualViewportHeight();
+  const visualViewport = useVisualViewport();
   const sheetSpacing = compact ? spacing.md : spacing.lg;
   const maxHeightRatio = compact ? COMPACT_MAX_HEIGHT_RATIO : MAX_HEIGHT_RATIO;
 
   // Reason (1). Null on native and on browsers without visualViewport, where
   // filling the parent is already correct.
   const scrim =
-    visualViewportHeight != null ? { width: '100%' as const, height: visualViewportHeight } : { flex: 1 };
+    visualViewport != null
+      ? {
+          position: 'absolute' as const,
+          top: visualViewport.top,
+          left: visualViewport.left,
+          width: visualViewport.width,
+          height: visualViewport.height,
+        }
+      : { flex: 1 };
 
   // Reason (3). Only the last element carries it, so it is never doubled.
   const safeBottom = Math.max(sheetSpacing, insets.bottom);
@@ -78,7 +86,10 @@ export function BottomSheet({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      // react-native-web's slide animation leaves a transformed fixed layer,
+      // which compounds Safari's keyboard viewport bugs. Native keeps the
+      // platform-conventional slide; web uses a compositor-safe fade.
+      animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
       onRequestClose={onClose}
       accessibilityViewIsModal
     >

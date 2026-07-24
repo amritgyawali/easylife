@@ -91,7 +91,10 @@ export function BottomSheet({
           style={{ flex: 1 }}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          // `padding` makes the entire sheet rise by the keyboard height on
+          // iOS. Reducing its height instead keeps the header/footer anchored
+          // and gives the lost space to the scrollable form body.
+          behavior={Platform.OS === 'ios' ? 'height' : undefined}
           style={{
             maxHeight: `${maxHeightRatio * 100}%`,
             marginHorizontal: compact ? spacing.sm : 0,
@@ -152,6 +155,8 @@ export function BottomSheet({
                       paddingBottom: footer ? sheetSpacing : safeBottom,
                     }
               }
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
             >
               {children}

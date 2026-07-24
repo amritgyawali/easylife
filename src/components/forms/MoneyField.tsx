@@ -1,6 +1,7 @@
 import { TextInput, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { minorUnitsFor } from '@/utils/money';
@@ -25,6 +26,7 @@ export interface MoneyFieldProps {
  */
 export function MoneyField({ label, value, onChangeText, currency, error, autoFocus }: MoneyFieldProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
   const decimals = minorUnitsFor(currency);
 
   function handleChange(text: string) {
@@ -63,7 +65,7 @@ export function MoneyField({ label, value, onChangeText, currency, error, autoFo
           placeholder="0.00"
           placeholderTextColor={theme.colors.textMuted}
           keyboardType="decimal-pad"
-          autoFocus={autoFocus}
+          autoFocus={!compact && autoFocus}
           style={{ flex: 1, color: theme.colors.text, fontSize: fontSize.xl, paddingVertical: spacing.sm }}
         />
       </View>

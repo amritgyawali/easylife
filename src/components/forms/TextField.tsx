@@ -1,6 +1,7 @@
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 
@@ -17,8 +18,9 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
  * auth; this is the same visual treatment without requiring a form context for
  * what are often one- or two-field sheets.
  */
-export function TextField({ label, error, helpText, multiline, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, helpText, multiline, autoFocus, ...inputProps }: TextFieldProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -45,6 +47,11 @@ export function TextField({ label, error, helpText, multiline, ...inputProps }: 
           fontSize: fontSize.md,
         }}
         placeholderTextColor={theme.colors.textMuted}
+        // Opening the software keyboard during the sheet animation makes the
+        // entire form jump on iOS. On a phone, let the user see the field and
+        // pinned submit action first, then open the keyboard on an intentional
+        // tap. Desktop keeps the faster auto-focus workflow.
+        autoFocus={!compact && autoFocus}
         {...inputProps}
       />
       {error ? (

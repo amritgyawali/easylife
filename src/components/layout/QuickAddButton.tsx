@@ -119,7 +119,7 @@ export function QuickAddButton() {
           <TextInput
             value={title}
             onChangeText={setTitle}
-            autoFocus
+            autoFocus={!compact}
             placeholder={kind === 'task' ? 'e.g. Pay electricity bill' : 'Note title'}
             placeholderTextColor={theme.colors.textMuted}
             onSubmitEditing={submit}
@@ -171,8 +171,7 @@ function inputStyle(theme: ReturnType<typeof useTheme>) {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: theme.colors.text,
-    // Below 16px, iOS Safari zooms the whole page in on focus — and this
-    // field autoFocuses the instant the sheet opens, so it fired immediately.
+    // Below 16px, iOS Safari zooms the whole page in on focus.
     fontSize: fontSize.md,
   };
 }

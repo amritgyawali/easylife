@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { addDays, formatIsoDate, isIsoDate, type IsoDate } from '@/utils/date';
 
@@ -94,6 +94,8 @@ export function DateField({ label, value, onChange, today, clearable = true }: D
           paddingHorizontal: spacing.md,
           color: theme.colors.text,
           backgroundColor: theme.colors.surface,
+          // Below 16px, iOS Safari zooms the whole page in on focus.
+          fontSize: fontSize.md,
         }}
       />
 

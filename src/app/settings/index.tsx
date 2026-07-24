@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { spacing, minTouchTarget, radius } from '@/constants/theme';
+import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore, type ThemePreference } from '@/stores/theme-store';
@@ -183,6 +183,7 @@ export default function SettingsScreen() {
               borderRadius: radius.md,
               paddingHorizontal: spacing.md,
               color: theme.colors.text,
+              fontSize: fontSize.md,
             }}
           />
         </View>
@@ -271,6 +272,7 @@ export default function SettingsScreen() {
                   borderRadius: radius.md,
                   paddingHorizontal: spacing.md,
                   color: theme.colors.text,
+                  fontSize: fontSize.md,
                 }}
               />
               <Button label="Set PIN" onPress={handleSetPin} loading={isSettingPin} variant="secondary" />

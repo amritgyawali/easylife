@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { spacing, minTouchTarget, radius } from '@/constants/theme';
+import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
 import { REGIONAL_DEFAULTS, SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -167,6 +167,7 @@ export default function OnboardingScreen() {
                       borderRadius: radius.md,
                       paddingHorizontal: spacing.md,
                       color: theme.colors.text,
+                      fontSize: fontSize.md,
                     }}
                   />
                 </View>
@@ -228,6 +229,7 @@ export default function OnboardingScreen() {
                       borderRadius: radius.md,
                       paddingHorizontal: spacing.md,
                       color: theme.colors.text,
+                      fontSize: fontSize.md,
                     }}
                   />
                 </View>
@@ -254,6 +256,7 @@ export default function OnboardingScreen() {
                           borderRadius: radius.md,
                           paddingHorizontal: spacing.md,
                           color: theme.colors.text,
+                          fontSize: fontSize.md,
                         }}
                       />
                     </View>
@@ -273,6 +276,7 @@ export default function OnboardingScreen() {
                           borderRadius: radius.md,
                           paddingHorizontal: spacing.md,
                           color: theme.colors.text,
+                          fontSize: fontSize.md,
                         }}
                       />
                     </View>

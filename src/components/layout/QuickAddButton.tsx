@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { DESKTOP_BREAKPOINT } from '@/constants/navigation';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
@@ -172,5 +172,8 @@ function inputStyle(theme: ReturnType<typeof useTheme>) {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: theme.colors.text,
+    // Below 16px, iOS Safari zooms the whole page in on focus — and this
+    // field autoFocuses the instant the sheet opens, so it fired immediately.
+    fontSize: fontSize.md,
   };
 }

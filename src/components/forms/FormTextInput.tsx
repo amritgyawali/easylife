@@ -2,7 +2,7 @@ import { TextInput, View, type TextInputProps } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 export interface FormTextInputProps extends Omit<TextInputProps, 'style'> {
@@ -43,6 +43,8 @@ export function FormTextInput({ name, label, helpText, ...inputProps }: FormText
               paddingHorizontal: spacing.md,
               color: theme.colors.text,
               backgroundColor: theme.colors.surface,
+              // Below 16px, iOS Safari zooms the whole page in on focus.
+              fontSize: fontSize.md,
             }}
             placeholderTextColor={theme.colors.textMuted}
             onBlur={onBlur}

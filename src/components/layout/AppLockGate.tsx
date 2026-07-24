@@ -7,7 +7,7 @@ import { useAppLockStore } from '@/stores/app-lock-store';
 import { authenticateWithBiometrics } from '@/services/security/biometric';
 import { isPinSet, verifyPin } from '@/services/security/pin';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, minTouchTarget, radius } from '@/constants/theme';
+import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
@@ -150,6 +150,7 @@ function LockScreen({ biometricEnabled, pinEnabled, onUnlock }: LockScreenProps)
                 color: theme.colors.text,
                 textAlign: 'center',
                 letterSpacing: 8,
+                fontSize: fontSize.md,
               }}
             />
             {error ? (

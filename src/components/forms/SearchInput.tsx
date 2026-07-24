@@ -2,7 +2,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 
 export interface SearchInputProps {
   value: string;
@@ -46,7 +46,7 @@ export function SearchInput({
         placeholderTextColor={theme.colors.textMuted}
         autoCorrect={false}
         returnKeyType="search"
-        style={{ flex: 1, color: theme.colors.text, paddingVertical: spacing.sm }}
+        style={{ flex: 1, color: theme.colors.text, paddingVertical: spacing.sm, fontSize: fontSize.md }}
       />
       {value.length > 0 ? (
         <Pressable

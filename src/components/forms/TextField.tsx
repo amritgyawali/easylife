@@ -1,7 +1,7 @@
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
@@ -39,6 +39,10 @@ export function TextField({ label, error, helpText, multiline, ...inputProps }: 
           textAlignVertical: multiline ? 'top' : 'center',
           color: theme.colors.text,
           backgroundColor: theme.colors.surface,
+          // Below 16px, iOS Safari zooms the whole page in on focus — with no
+          // way back out except scrolling/pinching manually. Every text field
+          // in the app must stay at 16px+ or that happens on every form sheet.
+          fontSize: fontSize.md,
         }}
         placeholderTextColor={theme.colors.textMuted}
         {...inputProps}

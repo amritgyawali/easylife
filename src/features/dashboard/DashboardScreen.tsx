@@ -24,6 +24,8 @@ import { NetWorthCard } from '@/features/networth/NetWorthCard';
 import { useNetWorth } from '@/features/networth/use-net-worth';
 import { useTransactions } from '@/features/finance/transactions-api';
 import { monthRange, summarise } from '@/features/finance/reports';
+import { BudgetSummaryCard } from '@/features/dashboard/BudgetSummaryCard';
+import { GoalsSummaryCard } from '@/features/dashboard/GoalsSummaryCard';
 
 /**
  * The dashboard: a read-mostly overview that answers "how am I doing" in one
@@ -117,13 +119,16 @@ export function DashboardScreen() {
             <QuickAction icon="repeat-outline" label="Habits" onPress={() => router.push('/habits')} />
           </View>
 
-          <NetWorthCard compact />
+          <NetWorthCard />
           <Button
             label="Accounts"
             size="sm"
             variant="ghost"
             onPress={() => router.push('/finance/accounts')}
           />
+
+          <BudgetSummaryCard />
+          <GoalsSummaryCard />
 
           {thisMonth.map((summary) => (
             <Card key={summary.currency} style={{ gap: spacing.md }}>

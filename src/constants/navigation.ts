@@ -9,8 +9,14 @@ export interface NavItem {
   icon: IconName;
 }
 
-/** Mobile bottom tab bar (section 5: "Mobile navigation"). Exactly 5 items. */
+/**
+ * Mobile bottom tab bar (section 5: "Mobile navigation"). "Home" is the
+ * dashboard (`/`, `DashboardScreen`) — the cross-life overview with a summary
+ * from every module — and is deliberately first so it's both the default
+ * landing screen and the first, always-visible way back to it.
+ */
 export const MOBILE_TABS: NavItem[] = [
+  { label: 'Home', href: '/', icon: 'home-outline' },
   { label: 'Today', href: '/today', icon: 'today-outline' },
   { label: 'Planner', href: '/tasks', icon: 'checkbox-outline' },
   { label: 'Money', href: '/finance', icon: 'wallet-outline' },

@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError, InlineMessage } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import type { InterestType, LoanDirection } from '@/types/database';
 import { useCounterparties } from '@/features/finance/counterparties-api';
@@ -104,73 +101,78 @@ export function LoanFormSheet({ visible, onClose, defaultCounterpartyId }: LoanF
     <FormSheet
       visible={visible}
       title="New loan"
+      subtitle="The balance is derived from the events you record against it."
       onClose={onClose}
+      size="lg"
       footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={createLoan.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
+        <FormActions
+          pending={createLoan.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Create loan"
+        />
       }
     >
-      <OptionGroup options={DIRECTION_OPTIONS} value={direction} onChange={setDirection} />
+      <OptionGroup variant="segmented" options={DIRECTION_OPTIONS} value={direction} onChange={setDirection} />
 
       {personOptions.length === 0 ? (
-        <ThemedText variant="body" tone="negative">
-          Add a person on the People screen first — a loan is always with someone.
-        </ThemedText>
+        <InlineMessage
+          tone="warning"
+          message="Add a person on the People screen first — a loan is always with someone."
+        />
       ) : (
         <OptionGroup
           label="With"
           options={personOptions}
           value={counterpartyId}
+          error={errors.person}
           onChange={(value) => {
             setCounterpartyId(value);
             setErrors((current) => ({ ...current, person: undefined }));
           }}
         />
       )}
-      {errors.person ? (
-        <ThemedText variant="caption" tone="negative">
-          {errors.person}
-        </ThemedText>
-      ) : null}
 
-      <MoneyField
-        label="Amount"
-        value={principal}
-        onChangeText={(value) => {
-          setPrincipal(value);
-          setErrors((current) => ({ ...current, amount: undefined }));
-        }}
-        currency={currency}
-        error={errors.amount}
-      />
+      <FormRow>
+        <MoneyField
+          label="Amount"
+          required
+          value={principal}
+          onChangeText={(value) => {
+            setPrincipal(value);
+            setErrors((current) => ({ ...current, amount: undefined }));
+          }}
+          currency={currency}
+          error={errors.amount}
+        />
+        <OptionGroup
+          label="Currency"
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          value={currency}
+          onChange={setCurrency}
+        />
+      </FormRow>
 
-      <OptionGroup
-        label="Currency"
-        options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        value={currency}
-        onChange={setCurrency}
-      />
-
-      <DateField
-        label="Date"
-        value={loanDate}
-        onChange={(value) => setLoanDate(value ?? today)}
-        today={today}
-        clearable={false}
-      />
-
-      <DateField label="Due back by" value={dueDate} onChange={setDueDate} today={today} />
+      <FormRow>
+        <DateField
+          label="Date"
+          value={loanDate}
+          onChange={(value) => setLoanDate(value ?? today)}
+          today={today}
+          clearable={false}
+        />
+        <DateField label="Due back by" value={dueDate} onChange={setDueDate} today={today} />
+      </FormRow>
 
       <OptionGroup
         label="Interest"
+        variant="segmented"
         options={INTEREST_OPTIONS}
         value={interestType}
         onChange={setInterestType}
       />
 
       {interestType === 'simple' ? (
-        <>
+        <FormRow>
           <TextField
             label="Rate (%)"
             value={interestRate}
@@ -184,6 +186,7 @@ export function LoanFormSheet({ visible, onClose, defaultCounterpartyId }: LoanF
           />
           <OptionGroup
             label="Per"
+            variant="segmented"
             options={[
               { value: 'monthly', label: 'Month' },
               { value: 'yearly', label: 'Year' },
@@ -191,16 +194,12 @@ export function LoanFormSheet({ visible, onClose, defaultCounterpartyId }: LoanF
             value={interestPeriod}
             onChange={setInterestPeriod}
           />
-        </>
+        </FormRow>
       ) : null}
 
       <TextField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional" multiline />
 
-      {createLoan.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(createLoan.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={createLoan.error} />
     </FormSheet>
   );
 }

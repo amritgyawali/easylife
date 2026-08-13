@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import { radius, spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/useTheme';
+import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { Stat, StatRow } from '@/components/ui/Stat';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
@@ -14,6 +16,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { useToday } from '@/hooks/useToday';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { formatIsoDate, relativeDayLabel } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import type { LoanStatus } from '@/types/database';
@@ -39,6 +42,7 @@ const SETTLED: LoanStatus[] = ['repaid', 'written_off', 'cancelled'];
 
 export default function LoansScreen() {
   const { today } = useToday();
+  const compact = useCompactLayout();
   const { data: loans, isLoading, error, refetch, isRefetching } = useLoansWithEvents();
   const { data: counterparties } = useCounterparties();
 
@@ -83,23 +87,28 @@ export default function LoansScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={refetch}
       refreshing={isRefetching}
       header={
         <>
           <ScreenHeader
+            eyebrow="Money"
             title="Loans"
             subtitle="Money lent and borrowed. Balances come from recorded events."
-            action={<Button label="New loan" size="sm" onPress={() => setFormOpen(true)} />}
+            action={<Button label="New loan" size="sm" icon="add" onPress={() => setFormOpen(true)} />}
           />
-          <OptionGroup
-            options={[
-              { value: 'open', label: 'Open' },
-              { value: 'settled', label: 'Settled' },
-            ]}
-            value={filter}
-            onChange={setFilter}
-          />
+          <View style={{ width: compact ? undefined : 260 }}>
+            <OptionGroup
+              variant="segmented"
+              options={[
+                { value: 'open', label: 'Open' },
+                { value: 'settled', label: 'Settled' },
+              ]}
+              value={filter}
+              onChange={setFilter}
+            />
+          </View>
         </>
       }
     >
@@ -110,32 +119,34 @@ export default function LoansScreen() {
       ) : (
         <>
           {filter === 'open' && totals.length > 0 ? (
-            <Card style={{ gap: spacing.md }}>
+            <Card style={{ gap: spacing.lg }}>
               {totals.map(([currency, total]) => (
-                <View key={currency} style={{ flexDirection: 'row', gap: spacing.lg }}>
-                  <View style={{ flex: 1, gap: spacing.xxs }}>
-                    <ThemedText variant="caption" tone="muted">
-                      Owed to me ({currency})
-                    </ThemedText>
-                    <ThemedText variant="subtitle" tone="positive">
-                      {formatMoney(total.lent, currency)}
-                    </ThemedText>
-                  </View>
-                  <View style={{ flex: 1, gap: spacing.xxs }}>
-                    <ThemedText variant="caption" tone="muted">
-                      I owe ({currency})
-                    </ThemedText>
-                    <ThemedText variant="subtitle" tone="negative">
-                      {formatMoney(total.borrowed, currency)}
-                    </ThemedText>
-                  </View>
-                </View>
+                <StatRow key={currency}>
+                  <Stat
+                    label={`Owed to me (${currency})`}
+                    value={formatMoney(total.lent, currency)}
+                    tone="positive"
+                    icon="arrow-down"
+                  />
+                  <Stat
+                    label={`I owe (${currency})`}
+                    value={formatMoney(total.borrowed, currency)}
+                    tone="negative"
+                    icon="arrow-up"
+                  />
+                  <Stat
+                    label={`Net (${currency})`}
+                    value={formatMoney(total.lent - total.borrowed, currency)}
+                    tone={total.lent - total.borrowed < 0 ? 'negative' : 'default'}
+                  />
+                </StatRow>
               ))}
             </Card>
           ) : null}
 
           {visible.length === 0 ? (
             <EmptyState
+              icon="cash-outline"
               title={filter === 'open' ? 'No open loans' : 'Nothing settled yet'}
               description={
                 filter === 'open'
@@ -146,18 +157,20 @@ export default function LoansScreen() {
               onAction={filter === 'open' ? () => setFormOpen(true) : undefined}
             />
           ) : (
-            visible.map((row) => (
-              <LoanCard
-                key={row.loan.id}
-                loan={row.loan}
-                personName={personName.get(row.loan.counterparty_id) ?? 'Unknown person'}
-                outstanding={row.outstanding}
-                status={row.status}
-                progress={row.progress}
-                today={today}
-                onPress={() => setEventLoan(row.loan)}
-              />
-            ))
+            <Grid minColumnWidth={340}>
+              {visible.map((row) => (
+                <LoanCard
+                  key={row.loan.id}
+                  loan={row.loan}
+                  personName={personName.get(row.loan.counterparty_id) ?? 'Unknown person'}
+                  outstanding={row.outstanding}
+                  status={row.status}
+                  progress={row.progress}
+                  today={today}
+                  onPress={() => setEventLoan(row.loan)}
+                />
+              ))}
+            </Grid>
           )}
         </>
       )}
@@ -190,65 +203,60 @@ function LoanCard({
   today: string;
   onPress: () => void;
 }) {
-  const theme = useTheme();
   const lent = loan.direction === 'lent';
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Record on loan with ${personName}`}
+    <Card
       onPress={onPress}
+      accessibilityLabel={`Record on loan with ${personName}`}
+      style={{ gap: spacing.md, height: '100%' }}
     >
-      <Card style={{ gap: spacing.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-          <View style={{ flex: 1, gap: spacing.xxs }}>
-            <ThemedText variant="subtitle">{personName}</ThemedText>
-            <ThemedText variant="caption" tone="muted">
-              {lent ? 'You lent' : 'You borrowed'} {formatMoney(loan.principal_minor, loan.currency)} ·{' '}
-              {formatIsoDate(loan.loan_date)}
-            </ThemedText>
-          </View>
-          <View style={{ alignItems: 'flex-end', gap: spacing.xxs }}>
-            <ThemedText variant="subtitle" tone={lent ? 'positive' : 'negative'}>
-              {formatMoney(outstanding, loan.currency)}
-            </ThemedText>
-            <ThemedText variant="caption" tone="muted">
-              outstanding
-            </ThemedText>
-          </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+        <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+          <ThemedText variant="subtitle" numberOfLines={1}>
+            {personName}
+          </ThemedText>
+          <ThemedText variant="caption" tone="muted">
+            {lent ? 'You lent' : 'You borrowed'} {formatMoney(loan.principal_minor, loan.currency)} ·{' '}
+            {formatIsoDate(loan.loan_date)}
+          </ThemedText>
         </View>
+        <View style={{ alignItems: 'flex-end', gap: spacing.xxs }}>
+          <ThemedText variant="subtitle" tone={lent ? 'positive' : 'negative'} numeric>
+            {formatMoney(outstanding, loan.currency)}
+          </ThemedText>
+          <ThemedText variant="caption" tone="subtle">
+            outstanding
+          </ThemedText>
+        </View>
+      </View>
 
-        <View
-          accessible={false}
-          style={{ height: 6, borderRadius: radius.full, backgroundColor: theme.colors.surfaceAlt }}
-        >
-          <View
-            style={{
-              height: 6,
-              width: `${Math.round(progress * 100)}%`,
-              borderRadius: radius.full,
-              backgroundColor: theme.colors.positive,
-            }}
+      <ProgressBar
+        value={progress}
+        height={6}
+        tone="positive"
+        accessibilityLabel={`Loan with ${personName}, ${Math.round(progress * 100)} percent repaid`}
+      />
+
+      <View style={{ flex: 1 }} />
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+        <Badge label={status.replace(/_/g, ' ')} tone={STATUS_TONE[status]} dot />
+        <Badge label={`${Math.round(progress * 100)}% repaid`} />
+        {loan.due_date ? (
+          <Badge
+            icon="calendar-outline"
+            label={`Due ${relativeDayLabel(loan.due_date, today)}`}
+            tone={status === 'overdue' ? 'negative' : 'neutral'}
           />
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-          <Badge label={status.replace(/_/g, ' ')} tone={STATUS_TONE[status]} />
-          <Badge label={`${Math.round(progress * 100)}% repaid`} />
-          {loan.due_date ? (
-            <Badge
-              label={`Due ${relativeDayLabel(loan.due_date, today)}`}
-              tone={status === 'overdue' ? 'negative' : 'neutral'}
-            />
-          ) : null}
-          {loan.interest_type !== 'none' ? (
-            <Badge
-              label={`${loan.interest_rate_percent}% ${loan.interest_period ?? ''}`.trim()}
-              tone="warning"
-            />
-          ) : null}
-        </View>
-      </Card>
-    </Pressable>
+        ) : null}
+        {loan.interest_type !== 'none' ? (
+          <Badge
+            label={`${loan.interest_rate_percent}% ${loan.interest_period ?? ''}`.trim()}
+            tone="warning"
+          />
+        ) : null}
+      </View>
+    </Card>
   );
 }

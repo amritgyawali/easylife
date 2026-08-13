@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError, InlineMessage } from '@/components/ui/InlineMessage';
 import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import type { DocumentType } from '@/types/database';
 import { useUploadDocument, type PickedFile, type UploadedDocument } from '@/features/documents/api';
@@ -95,7 +94,9 @@ export function UploadSheet({
     <FormSheet
       visible
       title="Add to vault"
+      subtitle={`${file.name} · ${(file.size / 1024).toFixed(0)} KB · ${file.mimeType}`}
       onClose={onClose}
+      size="lg"
       footer={
         <View style={{ flex: 1 }}>
           <Button
@@ -107,36 +108,28 @@ export function UploadSheet({
         </View>
       }
     >
-      <ThemedText variant="caption" tone="muted">
-        {file.name} · {(file.size / 1024).toFixed(0)} KB · {file.mimeType}
-      </ThemedText>
-
-      <TextField label="Title" value={title} onChangeText={setTitle} autoFocus />
+      <TextField label="Title" value={title} onChangeText={setTitle} autoFocus size="lg" />
       <OptionGroup
         label="Type"
         options={DOCUMENT_TYPE_OPTIONS}
         value={documentType}
         onChange={setDocumentType}
       />
-      <TextField
-        label="Institution"
-        value={institution}
-        onChangeText={setInstitution}
-        placeholder="Optional — which bank or wallet"
-      />
-      <DateField label="Document date" value={documentDate} onChange={setDocumentDate} today={today} />
+      <FormRow>
+        <TextField
+          label="Institution"
+          value={institution}
+          onChangeText={setInstitution}
+          placeholder="Optional — which bank or wallet"
+        />
+        <DateField label="Document date" value={documentDate} onChange={setDocumentDate} today={today} />
+      </FormRow>
 
       {duplicateNotice ? (
-        <ThemedText variant="body" tone="warning" accessibilityLiveRegion="polite">
-          {duplicateNotice}
-        </ThemedText>
+        <InlineMessage tone="warning" title="Already in your vault" message={duplicateNotice} />
       ) : null}
 
-      {uploadDocument.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(uploadDocument.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={uploadDocument.error} />
     </FormSheet>
   );
 }

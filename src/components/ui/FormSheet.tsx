@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { Children, type PropsWithChildren, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { spacing } from '@/constants/theme';
@@ -51,20 +51,21 @@ export function FormSheet({ visible, title, subtitle, onClose, footer, size, chi
  */
 export function FormRow({ children }: { children: ReactNode }) {
   const { compact } = useLayout();
+  // Conditional fields ({cond ? <Field/> : null}) arrive as null entries; they
+  // would otherwise each claim an equal, empty column.
+  const fields = Children.toArray(children).filter(Boolean);
 
-  if (compact) {
-    return <View style={{ gap: spacing.md }}>{children}</View>;
+  if (compact || fields.length < 2) {
+    return <View style={{ gap: spacing.md }}>{fields}</View>;
   }
 
   return (
     <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
-      {Array.isArray(children)
-        ? children.map((child, index) => (
-            <View key={index} style={{ flex: 1, minWidth: 0 }}>
-              {child}
-            </View>
-          ))
-        : children}
+      {fields.map((child, index) => (
+        <View key={index} style={{ flex: 1, minWidth: 0 }}>
+          {child}
+        </View>
+      ))}
     </View>
   );
 }

@@ -3,7 +3,11 @@ import { View } from 'react-native';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -32,13 +36,17 @@ export default function InvestmentsScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={refetch}
       refreshing={isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Money"
           title="Investments"
           subtitle="Values come from prices you record — there is no market feed."
-          action={<Button label="Add holding" size="sm" onPress={() => setAssetSheetOpen(true)} />}
+          action={
+            <Button label="Add holding" size="sm" icon="add" onPress={() => setAssetSheetOpen(true)} />
+          }
         />
       }
     >
@@ -48,6 +56,7 @@ export default function InvestmentsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : portfolio.length === 0 ? (
         <EmptyState
+          icon="trending-up-outline"
           title="No holdings yet"
           description="Track shares, fixed deposits, gold, property or anything else you own."
           actionLabel="Add holding"
@@ -55,44 +64,52 @@ export default function InvestmentsScreen() {
         />
       ) : (
         <>
-          {totals.map((total) => (
-            <Card key={total.currency} style={{ gap: spacing.md }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                PORTFOLIO · {total.currency}
-              </ThemedText>
-              <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-                <Figure label="Value" value={formatMoney(total.currentValueMinor, total.currency)} />
-                <Figure label="Invested" value={formatMoney(total.netInvestedMinor, total.currency)} />
-              </View>
-              <View style={{ gap: spacing.xxs }}>
-                <ThemedText variant="caption" tone="muted">
-                  {total.unrealisedGainMinor >= 0 ? 'Up by' : 'Down by'}
-                </ThemedText>
-                <ThemedText
-                  variant="subtitle"
-                  tone={total.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
-                >
-                  {total.unrealisedGainMinor >= 0 ? '+' : '-'}
-                  {formatMoney(Math.abs(total.unrealisedGainMinor), total.currency)}
-                </ThemedText>
-              </View>
-              {total.unvaluedAssetCount > 0 ? (
-                <ThemedText variant="caption" tone="warning">
-                  {total.unvaluedAssetCount} holding{total.unvaluedAssetCount === 1 ? '' : 's'} excluded — no
-                  price recorded yet.
-                </ThemedText>
-              ) : null}
-            </Card>
-          ))}
+          <Grid minColumnWidth={340} maxColumns={2}>
+            {totals.map((total) => (
+              <Card key={total.currency} style={{ gap: spacing.md, height: '100%' }}>
+                <SectionHeader title={`Portfolio · ${total.currency}`} />
+                <StatRow>
+                  <Stat
+                    label="Value"
+                    value={formatMoney(total.currentValueMinor, total.currency)}
+                    size="lg"
+                  />
+                  <Stat label="Invested" value={formatMoney(total.netInvestedMinor, total.currency)} />
+                  <Stat
+                    label={total.unrealisedGainMinor >= 0 ? 'Up by' : 'Down by'}
+                    value={`${total.unrealisedGainMinor >= 0 ? '+' : '-'}${formatMoney(
+                      Math.abs(total.unrealisedGainMinor),
+                      total.currency
+                    )}`}
+                    tone={total.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
+                    icon={total.unrealisedGainMinor >= 0 ? 'arrow-up' : 'arrow-down'}
+                  />
+                </StatRow>
+                {total.unvaluedAssetCount > 0 ? (
+                  <InlineMessage
+                    tone="warning"
+                    message={`${total.unvaluedAssetCount} holding${
+                      total.unvaluedAssetCount === 1 ? '' : 's'
+                    } excluded — no price recorded yet.`}
+                  />
+                ) : null}
+              </Card>
+            ))}
+          </Grid>
 
+          <SectionHeader title="Holdings" count={portfolio.length} />
+
+          <Grid minColumnWidth={340}>
           {portfolio.map(({ asset, transactions }) => {
             const valuation = valueAsset(asset, transactions);
 
             return (
-              <Card key={asset.id} style={{ gap: spacing.md }}>
+              <Card key={asset.id} style={{ gap: spacing.md, height: '100%' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-                  <View style={{ flex: 1, gap: spacing.xxs }}>
-                    <ThemedText variant="subtitle">{asset.name}</ThemedText>
+                  <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                    <ThemedText variant="subtitle" numberOfLines={1}>
+                      {asset.name}
+                    </ThemedText>
                     <ThemedText variant="caption" tone="muted">
                       {valuation.quantity} units
                       {asset.institution ? ` · ${asset.institution}` : ''}
@@ -104,11 +121,11 @@ export default function InvestmentsScreen() {
                         No price
                       </ThemedText>
                     ) : (
-                      <ThemedText variant="subtitle">
+                      <ThemedText variant="subtitle" numeric>
                         {formatMoney(valuation.currentValueMinor, asset.currency)}
                       </ThemedText>
                     )}
-                    <ThemedText variant="caption" tone="muted">
+                    <ThemedText variant="caption" tone="subtle" numeric>
                       {formatMoney(valuation.netInvestedMinor, asset.currency)} in
                     </ThemedText>
                   </View>
@@ -145,11 +162,14 @@ export default function InvestmentsScreen() {
                     : 'Record a price to see what this is worth.'}
                 </ThemedText>
 
+                <View style={{ flex: 1 }} />
+
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <Button
                     label="Buy / sell"
                     size="sm"
                     variant="secondary"
+                    icon="swap-vertical-outline"
                     onPress={() => setTransactionAsset(asset)}
                   />
                   <Button
@@ -162,6 +182,7 @@ export default function InvestmentsScreen() {
               </Card>
             );
           })}
+          </Grid>
         </>
       )}
 
@@ -180,13 +201,3 @@ export default function InvestmentsScreen() {
   );
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-      <ThemedText variant="subtitle">{value}</ThemedText>
-    </View>
-  );
-}

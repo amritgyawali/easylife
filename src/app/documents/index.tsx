@@ -5,15 +5,16 @@ import { useRouter } from 'expo-router';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { List, ListRow } from '@/components/ui/List';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
 import { SearchInput } from '@/components/forms/SearchInput';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { toUserMessage } from '@/utils/errors';
 import { formatFileSize } from '@/utils/bytes';
 import { formatIsoDate } from '@/utils/date';
@@ -30,6 +31,7 @@ import { UploadSheet } from '@/features/documents/UploadSheet';
 /** The document vault: private storage, deduplicated by file hash. */
 export default function DocumentsScreen() {
   const router = useRouter();
+  const compact = useCompactLayout();
   const { data: documents, isLoading, error, refetch, isRefetching } = useDocuments();
   const deleteDocument = useDeleteDocument();
   const { pickDocument, pickPhoto } = useFilePicker();
@@ -76,30 +78,45 @@ export default function DocumentsScreen() {
       header={
         <>
           <ScreenHeader
+            eyebrow="Records"
             title="Documents"
-            subtitle="Stored privately. Identical files are recognised, never uploaded twice. Open one in the Reader to read it without downloading it."
-            action={<Button label="Add file" size="sm" onPress={() => void handlePick('file')} />}
-          />
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            {Platform.OS !== 'web' ? (
+            subtitle="Stored privately, and never uploaded twice — identical files are recognised."
+            action={
               <Button
-                label="Camera"
+                label="Add file"
+                size="sm"
+                icon="cloud-upload-outline"
+                onPress={() => void handlePick('file')}
+              />
+            }
+          />
+          <View style={{ flexDirection: compact ? 'column' : 'row', gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <SearchInput value={query} onChangeText={setQuery} placeholder="Search documents" />
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {Platform.OS !== 'web' ? (
+                <Button
+                  label="Camera"
+                  size="sm"
+                  variant="secondary"
+                  icon="camera-outline"
+                  onPress={() => void handlePick('camera')}
+                />
+              ) : null}
+              <Button
+                label="Photo"
                 size="sm"
                 variant="secondary"
-                onPress={() => void handlePick('camera')}
+                icon="image-outline"
+                onPress={() => void handlePick('library')}
               />
-            ) : null}
-            <Button label="Photo" size="sm" variant="secondary" onPress={() => void handlePick('library')} />
+            </View>
           </View>
-          <SearchInput value={query} onChangeText={setQuery} placeholder="Search documents" />
         </>
       }
     >
-      {pickError ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {pickError}
-        </ThemedText>
-      ) : null}
+      {pickError ? <InlineMessage tone="negative" message={pickError} /> : null}
 
       {isLoading ? (
         <SkeletonList rows={4} />
@@ -107,6 +124,7 @@ export default function DocumentsScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon="folder-open-outline"
           title={query ? 'No matching documents' : 'Nothing stored yet'}
           description={
             query
@@ -117,48 +135,50 @@ export default function DocumentsScreen() {
           onAction={query ? undefined : () => void handlePick('file')}
         />
       ) : (
-        matching.map((document) => (
-          <Card key={document.id} style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-              <View style={{ flex: 1, gap: spacing.xxs }}>
-                <ThemedText variant="subtitle" numberOfLines={1}>
-                  {document.title}
-                </ThemedText>
-                <ThemedText variant="caption" tone="muted">
-                  {formatFileSize(document.file_size_bytes)}
-                  {document.institution ? ` · ${document.institution}` : ''}
-                  {document.document_date ? ` · ${formatIsoDate(document.document_date)}` : ''}
-                </ThemedText>
-              </View>
-              <IconButton
-                icon="reader-outline"
-                tone="primary"
-                accessibilityLabel={`Read ${document.title} in the app`}
-                onPress={() => router.push({ pathname: '/reader', params: { documentId: document.id } })}
-              />
-              <IconButton
-                icon="open-outline"
-                accessibilityLabel={`Open ${document.title} outside the app`}
-                onPress={() => void openDocument(document)}
-              />
-              <IconButton
-                icon="trash-outline"
-                accessibilityLabel={`Delete ${document.title}`}
-                onPress={() => deleteDocument.mutate(document)}
-              />
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Badge label={document.document_type.replace(/_/g, ' ')} />
-              {document.extraction_status ? (
-                <Badge
-                  label={document.extraction_status.replace(/_/g, ' ')}
-                  tone={document.extraction_status === 'confirmed' ? 'positive' : 'warning'}
-                />
-              ) : null}
-            </View>
-          </Card>
-        ))
+        <List>
+          {matching.map((document) => (
+            <ListRow
+              key={document.id}
+              icon="document-outline"
+              title={document.title}
+              subtitle={[
+                formatFileSize(document.file_size_bytes),
+                document.institution,
+                document.document_date ? formatIsoDate(document.document_date) : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              onPress={() => router.push({ pathname: '/reader', params: { documentId: document.id } })}
+              accessibilityLabel={`Read ${document.title} in the app`}
+              meta={
+                <>
+                  <Badge label={document.document_type.replace(/_/g, ' ')} />
+                  {document.extraction_status ? (
+                    <Badge
+                      label={document.extraction_status.replace(/_/g, ' ')}
+                      tone={document.extraction_status === 'confirmed' ? 'positive' : 'warning'}
+                      dot
+                    />
+                  ) : null}
+                </>
+              }
+              trailing={
+                <View onStartShouldSetResponder={() => true} style={{ flexDirection: 'row' }}>
+                  <IconButton
+                    icon="open-outline"
+                    accessibilityLabel={`Open ${document.title} outside the app`}
+                    onPress={() => void openDocument(document)}
+                  />
+                  <IconButton
+                    icon="trash-outline"
+                    accessibilityLabel={`Delete ${document.title}`}
+                    onPress={() => deleteDocument.mutate(document)}
+                  />
+                </View>
+              }
+            />
+          ))}
+        </List>
       )}
 
       <UploadSheet file={pickedFile} onClose={() => setPickedFile(null)} />

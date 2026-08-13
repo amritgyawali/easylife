@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { spacing } from '@/constants/theme';
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { DateField } from '@/components/forms/DateField';
+import { CheckboxField } from '@/components/forms/CheckboxField';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import { toIsoDateInTimeZone, type IsoDate } from '@/utils/date';
 import {
   useCreateCalendarEvent,
@@ -83,22 +79,19 @@ export function CalendarEventFormSheet({
       title={event ? 'Edit event' : 'New event'}
       onClose={onClose}
       footer={
-        <>
-          {event ? (
-            <Button
-              label="Delete"
-              variant="danger"
-              disabled={pending}
-              onPress={async () => {
-                await deleteEvent.mutateAsync(event.id);
-                onClose();
-              }}
-            />
-          ) : null}
-          <View style={{ flex: 1 }}>
-            <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
-          </View>
-        </>
+        <FormActions
+          pending={pending}
+          onSave={() => void handleSave()}
+          saveLabel={event ? 'Save changes' : 'Add event'}
+          onDelete={
+            event
+              ? async () => {
+                  await deleteEvent.mutateAsync(event.id);
+                  onClose();
+                }
+              : undefined
+          }
+        />
       }
     >
       <TextField
@@ -109,8 +102,10 @@ export function CalendarEventFormSheet({
           setErrors((current) => ({ ...current, title: undefined }));
         }}
         error={errors.title}
+        required
         placeholder="What's happening?"
         autoFocus
+        size="lg"
       />
 
       <DateField
@@ -121,32 +116,33 @@ export function CalendarEventFormSheet({
         clearable={false}
       />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Checkbox checked={allDay} onChange={setAllDay} accessibilityLabel="All-day event" />
-        <ThemedText variant="body">All day</ThemedText>
-      </View>
+      <CheckboxField
+        checked={allDay}
+        onChange={setAllDay}
+        label="All day"
+        description="Shows on the day without a start time."
+      />
 
-      {!allDay ? (
-        <TextField
-          label="Start time"
-          value={time}
-          onChangeText={(value) => {
-            setTime(value);
-            setErrors((current) => ({ ...current, time: undefined }));
-          }}
-          error={errors.time}
-          placeholder="HH:MM"
-          autoCapitalize="none"
-        />
-      ) : null}
+      <FormRow>
+        {!allDay ? (
+          <TextField
+            label="Start time"
+            value={time}
+            onChangeText={(value) => {
+              setTime(value);
+              setErrors((current) => ({ ...current, time: undefined }));
+            }}
+            error={errors.time}
+            placeholder="HH:MM"
+            autoCapitalize="none"
+            inputMode="numeric"
+            helpText="24-hour, e.g. 14:30."
+          />
+        ) : null}
+        <TextField label="Location" value={location} onChangeText={setLocation} placeholder="Optional" />
+      </FormRow>
 
-      <TextField label="Location" value={location} onChangeText={setLocation} placeholder="Optional" />
-
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={error} />
     </FormSheet>
   );
 }

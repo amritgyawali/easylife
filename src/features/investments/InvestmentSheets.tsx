@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import type { InvestmentAssetType, InvestmentTxnType } from '@/types/database';
 import {
@@ -54,11 +51,15 @@ export function AssetFormSheet({ visible, onClose }: { visible: boolean; onClose
     <FormSheet
       visible={visible}
       title="New holding"
+      subtitle="Shares, deposits, gold, property — anything you own."
       onClose={onClose}
+      size="lg"
       footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={createAsset.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
+        <FormActions
+          pending={createAsset.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Add holding"
+        />
       }
     >
       <TextField
@@ -69,17 +70,26 @@ export function AssetFormSheet({ visible, onClose }: { visible: boolean; onClose
           if (nameError) setNameError(null);
         }}
         error={nameError}
+        required
         placeholder="e.g. Nabil Bank shares"
         autoFocus
+        size="lg"
       />
       <OptionGroup label="Type" options={SELECTABLE_ASSET_TYPES} value={assetType} onChange={setAssetType} />
-      <TextField label="Symbol" value={symbol} onChangeText={setSymbol} placeholder="Optional, e.g. NABIL" />
-      <TextField
-        label="Held with"
-        value={institution}
-        onChangeText={setInstitution}
-        placeholder="Optional — broker, bank or custodian"
-      />
+      <FormRow>
+        <TextField
+          label="Symbol"
+          value={symbol}
+          onChangeText={setSymbol}
+          placeholder="Optional, e.g. NABIL"
+        />
+        <TextField
+          label="Held with"
+          value={institution}
+          onChangeText={setInstitution}
+          placeholder="Optional — broker or bank"
+        />
+      </FormRow>
       <OptionGroup
         label="Currency"
         options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
@@ -87,11 +97,7 @@ export function AssetFormSheet({ visible, onClose }: { visible: boolean; onClose
         onChange={setCurrency}
       />
 
-      {createAsset.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(createAsset.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={createAsset.error} />
     </FormSheet>
   );
 }
@@ -171,19 +177,12 @@ export function InvestmentTransactionSheet({
     <FormSheet
       visible={visible}
       title={asset.name}
+      subtitle="Record a buy, sell or payout against this holding."
       onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Save"
-            loading={recordTransaction.isPending}
-            fullWidth
-            onPress={() => void handleSave()}
-          />
-        </View>
-      }
+      size="lg"
+      footer={<FormActions pending={recordTransaction.isPending} onSave={() => void handleSave()} />}
     >
-      <OptionGroup options={TXN_OPTIONS} value={txnType} onChange={setTxnType} />
+      <OptionGroup variant="segmented" options={TXN_OPTIONS} value={txnType} onChange={setTxnType} />
 
       {needsQuantity ? (
         <TextField
@@ -210,23 +209,20 @@ export function InvestmentTransactionSheet({
         error={errors.amount}
       />
 
-      <MoneyField label="Fees" value={fees} onChangeText={setFees} currency={asset.currency} />
-
-      <DateField
-        label="Date"
-        value={txnDate}
-        onChange={(value) => setTxnDate(value ?? today)}
-        today={today}
-        clearable={false}
-      />
+      <FormRow>
+        <MoneyField label="Fees" value={fees} onChangeText={setFees} currency={asset.currency} />
+        <DateField
+          label="Date"
+          value={txnDate}
+          onChange={(value) => setTxnDate(value ?? today)}
+          today={today}
+          clearable={false}
+        />
+      </FormRow>
 
       <TextField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional" multiline />
 
-      {recordTransaction.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(recordTransaction.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={recordTransaction.error} />
     </FormSheet>
   );
 }
@@ -285,17 +281,9 @@ export function ValuationSheet({
     <FormSheet
       visible={visible}
       title={`Update price — ${asset.name}`}
+      subtitle="Prices are entered by hand; every derived value shows this date."
       onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Save"
-            loading={recordValuation.isPending}
-            fullWidth
-            onPress={() => void handleSave()}
-          />
-        </View>
-      }
+      footer={<FormActions pending={recordValuation.isPending} onSave={() => void handleSave()} saveLabel="Save price" />}
     >
       <MoneyField
         label="Price per unit"
@@ -306,6 +294,7 @@ export function ValuationSheet({
         }}
         currency={asset.currency}
         error={priceError}
+        required
         autoFocus
       />
       <DateField
@@ -315,16 +304,8 @@ export function ValuationSheet({
         today={today}
         clearable={false}
       />
-      <ThemedText variant="caption" tone="muted">
-        Prices are entered by hand — there is no market feed. Every value derived from this is shown with this
-        date.
-      </ThemedText>
 
-      {recordValuation.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(recordValuation.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={recordValuation.error} />
     </FormSheet>
   );
 }

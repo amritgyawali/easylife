@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormSheet } from '@/components/ui/FormSheet';
+import { FormError, InlineMessage } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import { formatMoney } from '@/utils/money';
 import type { IsoDate } from '@/utils/date';
 import { useAccounts } from '@/features/finance/accounts-api';
@@ -93,18 +90,11 @@ export function LoanEventSheet({ visible, onClose, loan, outstandingMinor }: Loa
     <FormSheet
       visible={visible}
       title="Record on this loan"
+      subtitle={`${formatMoney(outstandingMinor, loan.currency)} outstanding`}
       onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={recordEvent.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
-      }
+      footer={<FormActions pending={recordEvent.isPending} onSave={() => void handleSave()} />}
     >
-      <ThemedText variant="body" tone="muted">
-        {formatMoney(outstandingMinor, loan.currency)} outstanding.
-      </ThemedText>
-
-      <OptionGroup options={EVENT_OPTIONS} value={eventType} onChange={setEventType} />
+      <OptionGroup variant="segmented" options={EVENT_OPTIONS} value={eventType} onChange={setEventType} />
 
       {eventType !== 'note' ? (
         <MoneyField
@@ -130,9 +120,9 @@ export function LoanEventSheet({ visible, onClose, loan, outstandingMinor }: Loa
 
       {eventType === 'repayment' ? (
         matchingAccounts.length === 0 ? (
-          <ThemedText variant="caption" tone="muted">
-            No {loan.currency} account to record the cash against — the loan balance will still update.
-          </ThemedText>
+          <InlineMessage
+            message={`No ${loan.currency} account to record the cash against — the loan balance will still update.`}
+          />
         ) : (
           <OptionGroup
             label={loan.direction === 'lent' ? 'Money received into' : 'Money paid from'}
@@ -148,11 +138,7 @@ export function LoanEventSheet({ visible, onClose, loan, outstandingMinor }: Loa
 
       <TextField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional" multiline />
 
-      {recordEvent.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(recordEvent.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={recordEvent.error} />
     </FormSheet>
   );
 }

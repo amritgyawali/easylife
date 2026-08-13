@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,11 +13,11 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { toUserMessage } from '@/utils/errors';
 import { formatMoney } from '@/utils/money';
 import {
   useArchiveCounterparty,
@@ -101,14 +102,16 @@ export default function PeopleScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={() => void refetch()}
       refreshing={isRefetching}
       header={
         <>
           <ScreenHeader
+            eyebrow="Records"
             title="People"
             subtitle="Everyone money moves between, and where you stand with each."
-            action={<Button label="Add person" size="sm" onPress={() => openSheet(null)} />}
+            action={<Button label="Add person" size="sm" icon="add" onPress={() => openSheet(null)} />}
           />
           <SearchInput value={query} onChangeText={setQuery} placeholder="Search people" />
         </>
@@ -120,6 +123,7 @@ export default function PeopleScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon="people-outline"
           title={query ? 'No matching people' : 'No people yet'}
           description={
             query
@@ -130,16 +134,19 @@ export default function PeopleScreen() {
           onAction={query ? undefined : () => openSheet(null)}
         />
       ) : (
-        matching.map((person) => {
+        <Grid minColumnWidth={320}>
+        {matching.map((person) => {
           const positions = exposureByPerson.get(person.id) ?? [];
 
           return (
-            <Card key={person.id} style={{ gap: spacing.md }}>
+            <Card key={person.id} style={{ gap: spacing.md, height: '100%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <View style={{ flex: 1, gap: spacing.xxs }}>
-                  <ThemedText variant="subtitle">{person.display_name}</ThemedText>
+                <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                  <ThemedText variant="subtitle" numberOfLines={1}>
+                    {person.display_name}
+                  </ThemedText>
                   {person.phone || person.email ? (
-                    <ThemedText variant="caption" tone="muted">
+                    <ThemedText variant="caption" tone="muted" numberOfLines={1}>
                       {[person.phone, person.email].filter(Boolean).join(' · ')}
                     </ThemedText>
                   ) : null}
@@ -158,6 +165,7 @@ export default function PeopleScreen() {
                       key={position.currency}
                       variant="body"
                       weight="semibold"
+                      numeric
                       tone={
                         position.netMinor === 0 ? 'muted' : position.netMinor > 0 ? 'positive' : 'negative'
                       }
@@ -176,17 +184,26 @@ export default function PeopleScreen() {
                 </ThemedText>
               )}
 
+              <View style={{ flex: 1 }} />
+
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
-                <Badge label={person.kind} />
+                <Badge label={person.kind} icon="person-outline" />
                 {(transactionCount.get(person.id) ?? 0) > 0 ? (
                   <Badge label={`${transactionCount.get(person.id)} transactions`} tone="primary" />
                 ) : null}
                 <View style={{ flex: 1 }} />
-                <Button label="New loan" size="sm" variant="ghost" onPress={() => setLoanFor(person.id)} />
+                <Button
+                  label="New loan"
+                  size="sm"
+                  variant="secondary"
+                  icon="add"
+                  onPress={() => setLoanFor(person.id)}
+                />
               </View>
             </Card>
           );
-        })
+        })}
+        </Grid>
       )}
 
       <PersonFormSheet
@@ -258,6 +275,7 @@ function PersonFormSheet({
       visible={visible}
       title={person ? 'Edit person' : 'Add person'}
       onClose={onClose}
+      size="lg"
       footer={
         <>
           {person ? (
@@ -272,7 +290,12 @@ function PersonFormSheet({
             />
           ) : null}
           <View style={{ flex: 1 }}>
-            <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
+            <Button
+              label={person ? 'Save changes' : 'Add person'}
+              loading={pending}
+              fullWidth
+              onPress={() => void handleSave()}
+            />
           </View>
         </>
       }
@@ -285,32 +308,32 @@ function PersonFormSheet({
           if (nameError) setNameError(null);
         }}
         error={nameError}
+        required
         placeholder="Who is this?"
         autoFocus
+        size="lg"
       />
-      <OptionGroup label="Type" options={KIND_OPTIONS} value={kind} onChange={setKind} />
-      <TextField
-        label="Phone"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        placeholder="Optional"
-      />
-      <TextField
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        placeholder="Optional"
-      />
+      <OptionGroup label="Type" variant="segmented" options={KIND_OPTIONS} value={kind} onChange={setKind} />
+      <FormRow>
+        <TextField
+          label="Phone"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          placeholder="Optional"
+        />
+        <TextField
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="Optional"
+        />
+      </FormRow>
       <TextField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional" multiline />
 
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={error} />
     </FormSheet>
   );
 }

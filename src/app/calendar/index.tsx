@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List, ListRow } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -98,9 +99,10 @@ export default function CalendarScreen() {
       refreshing={eventsQuery.isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Overview"
           title="Calendar"
           subtitle={`Events and due tasks for the next ${WEEKS_AHEAD} weeks.`}
-          action={<Button label="Add event" size="sm" onPress={() => openSheet(null, today)} />}
+          action={<Button label="Add event" size="sm" icon="add" onPress={() => openSheet(null, today)} />}
         />
       }
     >
@@ -110,6 +112,7 @@ export default function CalendarScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : days.length === 0 ? (
         <EmptyState
+          icon="calendar-outline"
           title="Nothing scheduled"
           description="Add an event, or give a task a due date and it will show up here."
           actionLabel="Add event"
@@ -118,40 +121,46 @@ export default function CalendarScreen() {
       ) : (
         days.map((day) => (
           <View key={day.date} style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <ThemedText variant="label" weight="semibold" accessibilityRole="header">
-                {relativeDayLabel(day.date, today)}
-              </ThemedText>
-              <ThemedText variant="caption" tone="muted">
-                {day.date}
-              </ThemedText>
-              <View style={{ flex: 1 }} />
-              <Button label="Add" size="sm" variant="ghost" onPress={() => openSheet(null, day.date)} />
-            </View>
+            <SectionHeader
+              title={relativeDayLabel(day.date, today)}
+              description={day.date}
+              action={
+                <Button
+                  label="Add"
+                  size="sm"
+                  variant="ghost"
+                  icon="add"
+                  onPress={() => openSheet(null, day.date)}
+                />
+              }
+            />
 
             {day.events.length === 0 && day.tasks.length === 0 ? (
-              <ThemedText variant="caption" tone="muted">
+              <ThemedText variant="caption" tone="subtle" style={{ paddingBottom: spacing.xs }}>
                 Nothing scheduled.
               </ThemedText>
             ) : (
-              <Card padded={false}>
+              <List>
                 {day.events.map((event) => (
-                  <Pressable
+                  <ListRow
                     key={event.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit event ${event.title}`}
+                    icon="calendar-outline"
+                    iconTone="primary"
+                    title={event.title}
                     onPress={() => openSheet(event)}
-                    style={{ padding: spacing.md, gap: spacing.xs }}
-                  >
-                    <ThemedText variant="body">{event.title}</ThemedText>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                      <Badge
-                        label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
-                        tone="primary"
-                      />
-                      {event.location ? <Badge label={event.location} /> : null}
-                    </View>
-                  </Pressable>
+                    accessibilityLabel={`Edit event ${event.title}`}
+                    chevron
+                    meta={
+                      <>
+                        <Badge
+                          icon={event.all_day ? 'sunny-outline' : 'time-outline'}
+                          label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
+                          tone="primary"
+                        />
+                        {event.location ? <Badge icon="location-outline" label={event.location} /> : null}
+                      </>
+                    }
+                  />
                 ))}
 
                 {day.tasks.map((task) => (
@@ -163,7 +172,7 @@ export default function CalendarScreen() {
                     onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
                   />
                 ))}
-              </Card>
+              </List>
             )}
           </View>
         ))

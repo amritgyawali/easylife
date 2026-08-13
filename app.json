@@ -33,8 +33,8 @@
       "shortName": "LifeOS",
       "description": "Personal life and finance management — tasks, habits, notes, and a full ledger, offline-first.",
       "lang": "en",
-      "themeColor": "#0B5FFF",
-      "backgroundColor": "#F8F9FB",
+      "themeColor": "#2563EB",
+      "backgroundColor": "#F7F8FA",
       "display": "standalone"
     },
     "plugins": [
@@ -55,7 +55,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#0B5FFF"
+          "color": "#2563EB"
         }
       ],
       [

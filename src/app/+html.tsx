@@ -32,8 +32,8 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Matches src/constants/theme.ts background colors so the browser
             chrome/PWA title bar never flashes the wrong color on load. */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8F9FB" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101828" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F8FA" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0C111C" />
 
         {/* Expo's own build step auto-generates /favicon.ico from app.json's
             web.favicon and injects its own <link rel="icon">, so only the

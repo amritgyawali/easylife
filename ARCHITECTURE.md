@@ -16,14 +16,28 @@ Amrit LifeOS is a single Expo (React Native + React Native Web) codebase deploye
 
 A single `AppShell` component (`src/components/layout/AppShell.tsx`) renders either:
 
-- a **bottom tab bar** (5 items: Today, Planner, Money, Notes, Scan) below `DESKTOP_BREAKPOINT` (768px), or
-- a **persistent left sidebar** (17 items covering every feature area) at or above that width.
+- a **bottom tab bar** (Home, Today, Tasks, Money, plus "More") below 768px, with everything else in a grouped bottom sheet, or
+- a **grouped left sidebar plus a top bar** (global search, theme switch, quick add) at or above that width. Between 768px and 1080px the sidebar collapses to an icon rail automatically; above it, the rail is the user's choice (`stores/ui-store.ts`).
+
+The destinations themselves live in `src/constants/navigation.ts` as `NAV_SECTIONS` — Overview / Plan / Money / Records — and both the sidebar and the mobile "More" sheet are generated from that one list, so the two form factors always present the same map of the app.
+
+Layout size is resolved once, in `CompactLayoutProvider` (`src/hooks/useCompactLayout.tsx`), and read through `useCompactLayout()` (is it a phone?) or `useLayout()` (the full picture: `compact` / `medium` / `expanded` / `wide`). Components never subscribe to `Dimensions` themselves — one subscription for the whole tree keeps a long list from re-rendering on every resize frame.
 
 Every top-level route segment (`today/`, `tasks/`, `notes/`, `finance/`, `people/`, `loans/`, `investments/`, `documents/`, `imports/`, `reports/`, `settings/`, `habits/`, `calendar/`, `scan/`) has its own one-line `_layout.tsx` that renders `<AuthenticatedLayout />`, which guards on session and wraps content in `<AppShell>`. This keeps chrome and the auth guard from ever drifting between sections, while matching the flat `app/tasks/`, `app/notes/`, ... structure requested rather than nesting everything inside one route group.
 
 Screens for features not yet built in the current phase render `<ComingSoonScreen phase="Phase N" />` instead of being dead links — see the phase notes below. As of Phase 5 that is only `finance/budgets`.
 
-Every built screen is wrapped in `<Screen>` (`src/components/layout/Screen.tsx`), which owns safe-area insets, gutters, pull-to-refresh, and the max content width so a task list doesn't stretch across a 2000px desktop viewport.
+Every built screen is wrapped in `<Screen>` (`src/components/layout/Screen.tsx`), which owns safe-area insets, gutters, pull-to-refresh, the pinned header, and the max content width so a task list doesn't stretch across a 2000px desktop viewport (`width="narrow" | "content" | "wide" | "full"`). Screens that benefit from columns wrap their cards in `<Grid>` (`src/components/layout/Grid.tsx`), which derives the column count from its own measured width rather than the window's — the sidebar takes 260px out of the viewport, so a window-based calculation consistently fits one column too many.
+
+### The component layer
+
+Feature screens compose from `src/components/ui` and `src/components/forms` rather than styling views directly; a screen that reaches for a raw `View` + `Text` + border is a missing component. The pieces that carry the most weight:
+
+- **`List` / `ListRow`** — a card of rows with the separators drawn between them automatically, so no screen has to know which row is last.
+- **`Stat` / `StatRow`, `ProgressBar`, `Badge`, `SectionHeader`, `InlineMessage`** — the summary vocabulary. Money values render with tabular figures so a column lines up on the decimal point.
+- **`BottomSheet` / `FormSheet`** — one modal shell that presents as a bottom sheet with a grab handle on a phone and as a centred, width-capped dialog on a desktop viewport, with the keyboard/visual-viewport handling in a single place (see the comments in `BottomSheet.tsx`).
+- **`Field` + `inputChrome`** (`src/components/forms/Field.tsx`) — the label/help/error wrapper and the input's visual shell, including the focus ring and the 16px minimum font size that stops iOS Safari zooming the page on focus.
+- **`utils/interaction.ts`** — hover, focus-ring and pointer-cursor helpers. React Native's types only declare `pressed`, but react-native-web also reports `hovered` and `focused`; `pressState()` exposes them once instead of each component casting.
 
 ### Backend / database
 

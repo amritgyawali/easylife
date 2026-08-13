@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { AppState, Platform, TextInput, View, type AppStateStatus } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/auth/useProfile';
@@ -7,10 +8,12 @@ import { useAppLockStore } from '@/stores/app-lock-store';
 import { authenticateWithBiometrics } from '@/services/security/biometric';
 import { isPinSet, verifyPin } from '@/services/security/pin';
 import { useTheme } from '@/hooks/useTheme';
-import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
+import { spacing, controlHeight, radius, fontSize } from '@/constants/theme';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
+import { InlineMessage } from '@/components/ui/InlineMessage';
+import { webStyle } from '@/utils/interaction';
 import { APP_NAME } from '@/constants/app';
 
 /**
@@ -111,11 +114,21 @@ function LockScreen({ biometricEnabled, pinEnabled, onUnlock }: LockScreenProps)
 
   return (
     <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-      <View style={{ gap: spacing.lg, width: '100%', maxWidth: 320 }}>
-        <View style={{ alignItems: 'center', gap: spacing.xs }}>
-          <ThemedText variant="title" weight="bold">
-            {APP_NAME}
-          </ThemedText>
+      <View style={{ gap: spacing.lg, width: '100%', maxWidth: 340 }}>
+        <View style={{ alignItems: 'center', gap: spacing.sm }}>
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: radius.full,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: theme.colors.surfaceAlt,
+            }}
+          >
+            <Ionicons name="lock-closed" size={26} color={theme.colors.textMuted} />
+          </View>
+          <ThemedText variant="title">{APP_NAME}</ThemedText>
           <ThemedText variant="body" tone="muted">
             App is locked
           </ThemedText>
@@ -124,6 +137,8 @@ function LockScreen({ biometricEnabled, pinEnabled, onUnlock }: LockScreenProps)
         {biometricEnabled ? (
           <Button
             label="Unlock with biometrics"
+            icon="finger-print"
+            size="lg"
             onPress={tryBiometric}
             loading={isAuthenticating}
             fullWidth
@@ -141,26 +156,27 @@ function LockScreen({ biometricEnabled, pinEnabled, onUnlock }: LockScreenProps)
               placeholder="Enter PIN"
               placeholderTextColor={theme.colors.textMuted}
               accessibilityLabel="PIN"
-              style={{
-                minHeight: minTouchTarget,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: radius.md,
-                paddingHorizontal: spacing.md,
-                color: theme.colors.text,
-                textAlign: 'center',
-                letterSpacing: 8,
-                fontSize: fontSize.md,
-              }}
+              style={[
+                {
+                  minHeight: controlHeight.lg,
+                  borderWidth: 1,
+                  borderColor: error ? theme.colors.negative : theme.colors.border,
+                  borderRadius: radius.md,
+                  paddingHorizontal: spacing.md,
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                  textAlign: 'center',
+                  letterSpacing: 8,
+                  fontSize: fontSize.lg,
+                },
+                webStyle({ outlineStyle: 'none' }),
+              ]}
             />
-            {error ? (
-              <ThemedText variant="body" tone="negative" accessibilityLiveRegion="polite">
-                {error}
-              </ThemedText>
-            ) : null}
+            {error ? <InlineMessage tone="negative" message={error} /> : null}
             <Button
               label="Unlock with PIN"
               variant="secondary"
+              size="lg"
               onPress={submitPin}
               disabled={pin.length < 4}
               fullWidth

@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type PropsWithChildren } from 'react';
 import { SafeAreaView } from 'react-native';
 
+import { spacing } from '@/constants/theme';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { logger } from '@/utils/logger';
 
@@ -33,7 +34,7 @@ export class RootErrorBoundary extends Component<PropsWithChildren, State> {
   override render() {
     if (this.state.error) {
       return (
-        <SafeAreaView style={{ flex: 1, justifyContent: 'center' }}>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing.lg }}>
           <ErrorState error={this.state.error} onRetry={this.handleRetry} />
         </SafeAreaView>
       );

@@ -6,14 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { radius, spacing } from '@/constants/theme';
+import { minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Divider } from '@/components/ui/Divider';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { SearchInput } from '@/components/forms/SearchInput';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { formatFileSize } from '@/utils/bytes';
 import { formatIsoDate } from '@/utils/date';
 import { toUserMessage } from '@/utils/errors';
@@ -145,10 +149,22 @@ export default function ReaderScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        <Button label="Open a file" size="sm" onPress={() => void pick('file')} />
-        <Button label="Photo" size="sm" variant="secondary" onPress={() => void pick('library')} />
+        <Button label="Open a file" size="sm" icon="folder-open-outline" onPress={() => void pick('file')} />
+        <Button
+          label="Photo"
+          size="sm"
+          variant="secondary"
+          icon="image-outline"
+          onPress={() => void pick('library')}
+        />
         {Platform.OS !== 'web' ? (
-          <Button label="Camera" size="sm" variant="secondary" onPress={() => void pick('camera')} />
+          <Button
+            label="Camera"
+            size="sm"
+            variant="secondary"
+            icon="camera-outline"
+            onPress={() => void pick('camera')}
+          />
         ) : null}
       </View>
 
@@ -158,20 +174,13 @@ export default function ReaderScreen() {
         </ThemedText>
       ) : null}
 
-      {pickError ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {pickError}
-        </ThemedText>
-      ) : null}
+      {pickError ? <InlineMessage tone="negative" message={pickError} /> : null}
 
-      <View
-        style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: spacing.xs }}
-        accessibilityElementsHidden
-      />
+      <View style={{ marginVertical: spacing.xs }}>
+        <Divider />
+      </View>
 
-      <ThemedText variant="label" tone="muted">
-        From your vault
-      </ThemedText>
+      <SectionHeader title="From your vault" />
 
       <SearchInput value={query} onChangeText={setQuery} placeholder="Search documents" />
 
@@ -181,6 +190,7 @@ export default function ReaderScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon="folder-open-outline"
           title={query ? 'Nothing matches' : 'Your vault is empty'}
           description={
             query
@@ -207,7 +217,13 @@ export default function ReaderScreen() {
       onClose={compact ? () => openSource(null) : undefined}
       actions={
         source.origin === 'local' ? (
-          <Button label="Save" size="sm" variant="secondary" onPress={() => setFileToSave(source.file)} />
+          <Button
+            label="Save to vault"
+            size="sm"
+            variant="secondary"
+            icon="save-outline"
+            onPress={() => setFileToSave(source.file)}
+          />
         ) : null
       }
     />
@@ -305,20 +321,33 @@ function LibraryRow({
       accessibilityState={{ selected }}
       accessibilityLabel={`Read ${document.title}`}
       onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        padding: spacing.sm,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: selected ? theme.colors.primary : theme.colors.border,
-        backgroundColor: selected
-          ? theme.colors.accentSurface
-          : pressed
-            ? theme.colors.surfaceAlt
-            : theme.colors.surface,
-      })}
+      style={(state) => {
+        const { pressed, hovered, focused } = pressState(state);
+        return [
+          {
+            flexDirection: 'row' as const,
+            alignItems: 'center' as const,
+            gap: spacing.sm,
+            minHeight: minTouchTarget,
+            padding: spacing.sm,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: selected
+              ? theme.colors.primary
+              : hovered
+                ? theme.colors.borderStrong
+                : theme.colors.border,
+            backgroundColor: selected
+              ? theme.colors.accentSurface
+              : pressed || hovered
+                ? theme.colors.surfaceHover
+                : theme.colors.surface,
+          },
+          transition(),
+          clickable(),
+          focusRing(theme.colors.focus, focused),
+        ];
+      }}
     >
       <Ionicons
         name={viewerKindIcon(kind)}

@@ -1,5 +1,6 @@
 import { SafeAreaView } from 'react-native';
 
+import { spacing } from '@/constants/theme';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export interface ComingSoonScreenProps {
@@ -15,8 +16,12 @@ export interface ComingSoonScreenProps {
  */
 export function ComingSoonScreen({ title, phase }: ComingSoonScreenProps) {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <EmptyState title={title} description={`This screen is planned for ${phase}.`} />
+    <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: spacing.lg }}>
+      <EmptyState
+        icon="construct-outline"
+        title={title}
+        description={`This screen is planned for ${phase}.`}
+      />
     </SafeAreaView>
   );
 }

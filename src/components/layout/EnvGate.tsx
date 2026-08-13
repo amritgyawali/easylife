@@ -3,7 +3,8 @@ import { SafeAreaView, ScrollView } from 'react-native';
 
 import { getEnv, EnvValidationError } from '@/constants/env';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { spacing } from '@/constants/theme';
+import { InlineMessage } from '@/components/ui/InlineMessage';
+import { layout, spacing } from '@/constants/theme';
 
 /**
  * Validates required environment configuration once, before anything else
@@ -25,13 +26,19 @@ export function EnvGate({ children }: PropsWithChildren) {
   if (validationError) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.md }}>
-          <ThemedText variant="title" tone="negative">
-            App is not configured
-          </ThemedText>
-          <ThemedText variant="body" tone="muted">
-            {validationError.message}
-          </ThemedText>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            padding: spacing.xl,
+            gap: spacing.md,
+            width: '100%',
+            maxWidth: layout.narrow,
+            alignSelf: 'center',
+          }}
+        >
+          <ThemedText variant="title">App is not configured</ThemedText>
+          <InlineMessage tone="negative" message={validationError.message} />
         </ScrollView>
       </SafeAreaView>
     );

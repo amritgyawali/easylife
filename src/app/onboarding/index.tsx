@@ -1,15 +1,20 @@
 import { useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
+import { TextField } from '@/components/forms/TextField';
+import { FormRow } from '@/components/ui/FormSheet';
+import { spacing, radius } from '@/constants/theme';
 import { REGIONAL_DEFAULTS, SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useTheme } from '@/hooks/useTheme';
+import { useLayout } from '@/hooks/useCompactLayout';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useUpdatePreferences, useUpdateProfile } from '@/features/auth/useProfile';
 import { createOnboardingAccount } from '@/features/auth/onboarding-api';
@@ -44,8 +49,11 @@ const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES.map((code) => ({ value: code, labe
 
 const TOTAL_STEPS = 4;
 
+const STEP_TITLES = ['About you', 'Regional preferences', 'Starting balances', 'Notifications'];
+
 export default function OnboardingScreen() {
   const theme = useTheme();
+  const { compact } = useLayout();
   const router = useRouter();
   const { user } = useAuth();
   const updateProfile = useUpdateProfile();
@@ -117,21 +125,38 @@ export default function OnboardingScreen() {
     <ThemedView style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={{
-          padding: spacing.xl,
+          flexGrow: 1,
+          justifyContent: compact ? 'flex-start' : 'center',
+          padding: compact ? spacing.lg : spacing.xxl,
           gap: spacing.xl,
-          maxWidth: 560,
+          maxWidth: 620,
           width: '100%',
           alignSelf: 'center',
         }}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="title" weight="bold">
-            Let&apos;s set things up
-          </ThemedText>
-          <ThemedText variant="body" tone="muted">
-            Step {step + 1} of {TOTAL_STEPS}
-          </ThemedText>
-          <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+        <View style={{ gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: radius.md,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: theme.colors.primary,
+              }}
+            >
+              <Ionicons name="layers" size={22} color={theme.colors.primaryText} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="title">Let&apos;s set things up</ThemedText>
+              <ThemedText variant="label" tone="muted">
+                Step {step + 1} of {TOTAL_STEPS} · {STEP_TITLES[step]}
+              </ThemedText>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: spacing.xs }} accessibilityRole="progressbar">
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <View
                 key={index}
@@ -151,26 +176,14 @@ export default function OnboardingScreen() {
             {step === 0 ? (
               <>
                 <ThemedText variant="subtitle">About you</ThemedText>
-                <View style={{ gap: spacing.xs }}>
-                  <ThemedText variant="label" tone="muted">
-                    Your name
-                  </ThemedText>
-                  <TextInput
-                    value={fullName}
-                    onChangeText={setFullName}
-                    placeholder="e.g. Amrit"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={{
-                      minHeight: minTouchTarget,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: radius.md,
-                      paddingHorizontal: spacing.md,
-                      color: theme.colors.text,
-                      fontSize: fontSize.md,
-                    }}
-                  />
-                </View>
+                <TextField
+                  label="Your name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="e.g. Amrit"
+                  autoComplete="name"
+                  size="lg"
+                />
                 <OptionGroup
                   label="Default currency"
                   options={CURRENCY_OPTIONS}
@@ -213,74 +226,35 @@ export default function OnboardingScreen() {
             {step === 2 ? (
               <>
                 <ThemedText variant="subtitle">Starting balances</ThemedText>
-                <View style={{ gap: spacing.xs }}>
-                  <ThemedText variant="label" tone="muted">
-                    Opening cash balance ({currency})
-                  </ThemedText>
-                  <TextInput
-                    value={openingCashBalance}
-                    onChangeText={setOpeningCashBalance}
-                    keyboardType="decimal-pad"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={{
-                      minHeight: minTouchTarget,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: radius.md,
-                      paddingHorizontal: spacing.md,
-                      color: theme.colors.text,
-                      fontSize: fontSize.md,
-                    }}
-                  />
-                </View>
+                <TextField
+                  label={`Opening cash balance (${currency})`}
+                  value={openingCashBalance}
+                  onChangeText={setOpeningCashBalance}
+                  keyboardType="decimal-pad"
+                  helpText="What you have in hand right now. You can change it later."
+                  size="lg"
+                />
                 <Button
-                  label={wantsBankAccount ? 'Remove bank / wallet account' : '+ Add a bank or wallet account'}
+                  label={wantsBankAccount ? 'Remove bank / wallet account' : 'Add a bank or wallet account'}
                   variant="secondary"
+                  icon={wantsBankAccount ? 'close' : 'add'}
                   onPress={() => setWantsBankAccount((prev) => !prev)}
                 />
                 {wantsBankAccount ? (
-                  <View style={{ gap: spacing.md }}>
-                    <View style={{ gap: spacing.xs }}>
-                      <ThemedText variant="label" tone="muted">
-                        Account name
-                      </ThemedText>
-                      <TextInput
-                        value={bankAccountName}
-                        onChangeText={setBankAccountName}
-                        placeholder="e.g. NIC Asia Savings"
-                        placeholderTextColor={theme.colors.textMuted}
-                        style={{
-                          minHeight: minTouchTarget,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          borderRadius: radius.md,
-                          paddingHorizontal: spacing.md,
-                          color: theme.colors.text,
-                          fontSize: fontSize.md,
-                        }}
-                      />
-                    </View>
-                    <View style={{ gap: spacing.xs }}>
-                      <ThemedText variant="label" tone="muted">
-                        Opening balance ({currency})
-                      </ThemedText>
-                      <TextInput
-                        value={bankOpeningBalance}
-                        onChangeText={setBankOpeningBalance}
-                        keyboardType="decimal-pad"
-                        placeholderTextColor={theme.colors.textMuted}
-                        style={{
-                          minHeight: minTouchTarget,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          borderRadius: radius.md,
-                          paddingHorizontal: spacing.md,
-                          color: theme.colors.text,
-                          fontSize: fontSize.md,
-                        }}
-                      />
-                    </View>
-                  </View>
+                  <FormRow>
+                    <TextField
+                      label="Account name"
+                      value={bankAccountName}
+                      onChangeText={setBankAccountName}
+                      placeholder="e.g. NIC Asia Savings"
+                    />
+                    <TextField
+                      label={`Opening balance (${currency})`}
+                      value={bankOpeningBalance}
+                      onChangeText={setBankOpeningBalance}
+                      keyboardType="decimal-pad"
+                    />
+                  </FormRow>
                 ) : null}
               </>
             ) : null}
@@ -293,8 +267,9 @@ export default function OnboardingScreen() {
                   Settings.
                 </ThemedText>
                 <OptionGroup
+                  variant="segmented"
                   options={[
-                    { value: 'on', label: 'Enable reminders' },
+                    { value: 'on', label: 'Enable reminders', icon: 'notifications-outline' },
                     { value: 'off', label: 'Not now' },
                   ]}
                   value={notificationsEnabled ? 'on' : 'off'}
@@ -303,35 +278,48 @@ export default function OnboardingScreen() {
               </>
             ) : null}
 
-            {error ? (
-              <ThemedText variant="body" tone="negative" accessibilityLiveRegion="polite">
-                {error}
-              </ThemedText>
-            ) : null}
+            {error ? <InlineMessage tone="negative" message={error} /> : null}
           </View>
         </Card>
 
-        <View style={{ flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between' }}>
+        <View style={{ gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+            {step > 0 ? (
+              <Button
+                label="Back"
+                variant="secondary"
+                icon="chevron-back"
+                disabled={isFinishing}
+                onPress={() => setStep((s) => s - 1)}
+              />
+            ) : null}
+            <View style={{ flex: 1 }}>
+              {step < TOTAL_STEPS - 1 ? (
+                <Button
+                  label="Next"
+                  icon="arrow-forward"
+                  iconPosition="trailing"
+                  fullWidth
+                  onPress={() => setStep((s) => s + 1)}
+                />
+              ) : (
+                <Button
+                  label="Finish setup"
+                  icon="checkmark"
+                  fullWidth
+                  loading={isFinishing}
+                  onPress={() => finish(false)}
+                />
+              )}
+            </View>
+          </View>
           <Button
             label="Skip and configure later"
             variant="ghost"
             disabled={isFinishing}
             onPress={() => finish(true)}
           />
-          {step < TOTAL_STEPS - 1 ? (
-            <Button label="Next" onPress={() => setStep((s) => s + 1)} />
-          ) : (
-            <Button label="Finish setup" loading={isFinishing} onPress={() => finish(false)} />
-          )}
         </View>
-        {step > 0 ? (
-          <Button
-            label="Back"
-            variant="secondary"
-            disabled={isFinishing}
-            onPress={() => setStep((s) => s - 1)}
-          />
-        ) : null}
       </ScrollView>
     </ThemedView>
   );

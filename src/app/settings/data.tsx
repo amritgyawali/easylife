@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -34,6 +36,7 @@ export default function DataScreen() {
   const transactionData = useTransactionExportData();
 
   const [status, setStatus] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState<'csv' | 'json' | null>(null);
 
   const lookups = useMemo(() => {
@@ -50,6 +53,7 @@ export default function DataScreen() {
   const exportCsv = async () => {
     setBusy('csv');
     setStatus(null);
+    setFailed(false);
     try {
       const transactions = await transactionData.mutateAsync();
       if (transactions.length === 0) {
@@ -66,6 +70,7 @@ export default function DataScreen() {
     } catch (error) {
       logger.error('export.csv_failed', error);
       setStatus(toUserMessage(error));
+      setFailed(true);
     } finally {
       setBusy(null);
     }
@@ -74,6 +79,7 @@ export default function DataScreen() {
   const exportBackup = async () => {
     setBusy('json');
     setStatus(null);
+    setFailed(false);
     try {
       const bundle = await createBackup.mutateAsync();
       const rows = backupRowCount(bundle);
@@ -91,48 +97,54 @@ export default function DataScreen() {
     } catch (error) {
       logger.error('export.backup_failed', error);
       setStatus(toUserMessage(error));
+      setFailed(true);
     } finally {
       setBusy(null);
     }
   };
 
   return (
-    <Screen header={<ScreenHeader title="Data & backup" subtitle="Export your own copy, any time" />}>
-      {status ? (
-        <ThemedText variant="body" tone="muted" accessibilityLiveRegion="polite">
-          {status}
-        </ThemedText>
-      ) : null}
+    <Screen
+      width="wide"
+      header={
+        <ScreenHeader eyebrow="Settings" title="Data & backup" subtitle="Export your own copy, any time." />
+      }
+    >
+      {status ? <InlineMessage tone={failed ? 'negative' : 'positive'} message={status} /> : null}
 
-      <Section
-        title="Transactions (CSV)"
-        description="A spreadsheet of every confirmed transaction — dates, amounts, categories and counterparties — ready for Excel, Numbers or Google Sheets."
-      >
-        <Button
-          label="Export transactions"
-          onPress={exportCsv}
-          loading={busy === 'csv'}
-          disabled={busy !== null}
-        />
-      </Section>
+      <Grid minColumnWidth={340} maxColumns={2}>
+        <Section
+          title="Transactions (CSV)"
+          description="A spreadsheet of every confirmed transaction — dates, amounts, categories and counterparties — ready for Excel, Numbers or Google Sheets."
+        >
+          <Button
+            label="Export transactions"
+            icon="download-outline"
+            onPress={exportCsv}
+            loading={busy === 'csv'}
+            disabled={busy !== null}
+          />
+        </Section>
 
-      <Section
-        title="Full backup (JSON)"
-        description="One file with everything you own — tasks, notes, money, loans, investments and document records. Keep it somewhere safe; it is your data to hold."
-      >
-        <Button
-          label="Download full backup"
-          onPress={exportBackup}
-          loading={busy === 'json'}
-          disabled={busy !== null}
-          variant="secondary"
-        />
-      </Section>
+        <Section
+          title="Full backup (JSON)"
+          description="One file with everything you own — tasks, notes, money, loans, investments and document records. Keep it somewhere safe; it is your data to hold."
+        >
+          <Button
+            label="Download full backup"
+            icon="archive-outline"
+            onPress={exportBackup}
+            loading={busy === 'json'}
+            disabled={busy !== null}
+            variant="secondary"
+          />
+        </Section>
+      </Grid>
 
-      <ThemedText variant="caption" tone="muted">
-        Exports are generated on your device from your live data and are never sent anywhere else. A backup
-        does not include the document files themselves — those stay in your document vault.
-      </ThemedText>
+      <InlineMessage
+        icon="lock-closed-outline"
+        message="Exports are generated on your device from your live data and are never sent anywhere else. A backup does not include the document files themselves — those stay in your document vault."
+      />
     </Screen>
   );
 }
@@ -147,13 +159,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card style={{ gap: spacing.md, height: '100%' }}>
       <View style={{ gap: spacing.xs }}>
         <ThemedText variant="subtitle">{title}</ThemedText>
-        <ThemedText variant="body" tone="muted">
+        <ThemedText variant="label" tone="muted">
           {description}
         </ThemedText>
       </View>
+      <View style={{ flex: 1 }} />
       {children}
     </Card>
   );

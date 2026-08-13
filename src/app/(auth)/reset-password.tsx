@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthScreenLayout } from '@/components/layout/AuthScreenLayout';
 import { FormTextInput } from '@/components/forms/FormTextInput';
 import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { spacing } from '@/constants/theme';
 import { resetPasswordSchema, type ResetPasswordFormValues } from '@/features/auth/schemas';
 import { updatePassword } from '@/features/auth/api';
@@ -53,16 +53,13 @@ export default function ResetPasswordScreen() {
             secureTextEntry
             autoCapitalize="none"
           />
-          {submitError ? (
-            <ThemedText variant="body" tone="negative" accessibilityLiveRegion="polite">
-              {submitError}
-            </ThemedText>
-          ) : null}
+          {submitError ? <InlineMessage tone="negative" message={submitError} /> : null}
           <Button
             label="Update password"
             onPress={form.handleSubmit(onSubmit)}
             loading={form.formState.isSubmitting}
             fullWidth
+            size="lg"
           />
         </View>
       </FormProvider>

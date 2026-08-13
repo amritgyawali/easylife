@@ -2,6 +2,8 @@ import { Platform, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List, ListRow } from '@/components/ui/List';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -50,12 +52,10 @@ export default function SyncScreen() {
         void notificationsQuery.refetch();
       }}
       refreshing={conflictsQuery.isRefetching || notificationsQuery.isRefetching}
-      header={<ScreenHeader title="Sync & notifications" subtitle={syncSubtitle()} />}
+      header={<ScreenHeader eyebrow="Settings" title="Sync & notifications" subtitle={syncSubtitle()} />}
     >
       <View style={{ gap: spacing.sm }}>
-        <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-          UNRESOLVED CONFLICTS
-        </ThemedText>
+        <SectionHeader title="Unresolved conflicts" count={conflicts.length || undefined} />
 
         {conflictsQuery.isLoading ? (
           <SkeletonList rows={2} />
@@ -80,20 +80,21 @@ export default function SyncScreen() {
       </View>
 
       <View style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-            NOTIFICATIONS
-          </ThemedText>
-          {unread > 0 ? (
-            <Button
-              label="Mark all read"
-              size="sm"
-              variant="ghost"
-              onPress={() => markAllRead.mutate()}
-              loading={markAllRead.isPending}
-            />
-          ) : null}
-        </View>
+        <SectionHeader
+          title="Notifications"
+          count={unread > 0 ? `${unread} unread` : undefined}
+          action={
+            unread > 0 ? (
+              <Button
+                label="Mark all read"
+                size="sm"
+                variant="ghost"
+                onPress={() => markAllRead.mutate()}
+                loading={markAllRead.isPending}
+              />
+            ) : null
+          }
+        />
 
         {notificationsQuery.isLoading ? (
           <SkeletonList rows={3} />
@@ -101,48 +102,34 @@ export default function SyncScreen() {
           <ErrorState error={notificationsQuery.error} onRetry={() => void notificationsQuery.refetch()} />
         ) : notifications.length === 0 ? (
           <EmptyState
+            icon="notifications-outline"
             title="No notifications"
             description="Reminders, extraction results and export updates will show up here."
           />
         ) : (
-          <Card padded={false}>
-            {notifications.map((notification, index) => (
-              <View
+          <List>
+            {notifications.map((notification) => (
+              <ListRow
                 key={notification.id}
-                style={{
-                  padding: spacing.md,
-                  gap: spacing.xxs,
-                  borderTopWidth: index === 0 ? 0 : 1,
-                  borderTopColor: 'transparent',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  {notification.read_at === null ? <Badge label="New" tone="primary" /> : null}
-                  <ThemedText variant="body" weight="semibold" style={{ flex: 1 }}>
-                    {notification.title}
-                  </ThemedText>
-                  <ThemedText variant="caption" tone="muted">
-                    {formatIsoDate(notification.created_at.slice(0, 10))}
-                  </ThemedText>
-                </View>
-                {notification.body ? (
-                  <ThemedText variant="body" tone="muted">
-                    {notification.body}
-                  </ThemedText>
-                ) : null}
-                {notification.read_at === null ? (
-                  <View style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }}>
+                icon={notification.read_at === null ? 'mail-unread-outline' : 'mail-open-outline'}
+                iconTone={notification.read_at === null ? 'primary' : 'muted'}
+                title={notification.title}
+                subtitle={notification.body ?? undefined}
+                caption={formatIsoDate(notification.created_at.slice(0, 10))}
+                meta={notification.read_at === null ? <Badge label="New" tone="primary" dot /> : null}
+                trailing={
+                  notification.read_at === null ? (
                     <Button
                       label="Mark read"
                       size="sm"
                       variant="ghost"
                       onPress={() => markRead.mutate(notification.id)}
                     />
-                  </View>
-                ) : null}
-              </View>
+                  ) : null
+                }
+              />
             ))}
-          </Card>
+          </List>
         )}
       </View>
     </Screen>
@@ -182,7 +169,12 @@ function ConflictCard({
       </ThemedText>
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
-        <Button label="Keep this device's version" onPress={() => onResolve('kept_local')} disabled={busy} />
+        <Button
+          label="Keep this device's version"
+          icon="phone-portrait-outline"
+          onPress={() => onResolve('kept_local')}
+          disabled={busy}
+        />
         <Button
           label="Keep server version"
           variant="secondary"

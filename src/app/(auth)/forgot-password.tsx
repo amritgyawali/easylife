@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthScreenLayout } from '@/components/layout/AuthScreenLayout';
 import { FormTextInput } from '@/components/forms/FormTextInput';
 import { Button } from '@/components/ui/Button';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { spacing } from '@/constants/theme';
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/features/auth/schemas';
@@ -54,16 +55,13 @@ export default function ForgotPasswordScreen() {
             keyboardType="email-address"
             textContentType="emailAddress"
           />
-          {submitError ? (
-            <ThemedText variant="body" tone="negative" accessibilityLiveRegion="polite">
-              {submitError}
-            </ThemedText>
-          ) : null}
+          {submitError ? <InlineMessage tone="negative" message={submitError} /> : null}
           <Button
             label="Send reset link"
             onPress={form.handleSubmit(onSubmit)}
             loading={form.formState.isSubmitting}
             fullWidth
+            size="lg"
           />
         </View>
       </FormProvider>

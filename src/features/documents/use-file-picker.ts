@@ -12,10 +12,29 @@ import type { PickedFile } from '@/features/documents/api';
  * and both differ again on web; funnelling them through `PickedFile` here
  * keeps that mess out of the screens and out of the upload path.
  */
+/** File types the import/upload paths know what to do with. */
+export const IMPORTABLE_MIME_TYPES = [
+  'text/csv',
+  'text/plain',
+  'text/comma-separated-values',
+  'application/pdf',
+  'image/*',
+];
+
+export interface PickDocumentOptions {
+  /**
+   * Accepts any file rather than only the importable types. The reader uses
+   * this: it can show far more than the import pipeline can parse, and a
+   * picker that hides a file the app could have displayed is worse than one
+   * that occasionally offers a preview it can't render.
+   */
+  anyType?: boolean;
+}
+
 export function useFilePicker() {
-  const pickDocument = useCallback(async (): Promise<PickedFile | null> => {
+  const pickDocument = useCallback(async (options?: PickDocumentOptions): Promise<PickedFile | null> => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/plain', 'text/comma-separated-values', 'application/pdf', 'image/*'],
+      type: options?.anyType ? '*/*' : IMPORTABLE_MIME_TYPES,
       copyToCacheDirectory: true,
       multiple: false,
     });

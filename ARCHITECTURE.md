@@ -54,6 +54,21 @@ Only the **delimited-text engine** is implemented. It reads CSV/TSV statement ex
 
 Both report an `availability()` reason that the Scan screen renders verbatim, so the app explains the gap instead of failing mysteriously — and implementing either later is a change to one file, not to any call site.
 
+### Reading documents in place (the Reader)
+
+`/reader` (`src/app/reader/index.tsx`, views in `src/features/documents/viewer/`) opens a PDF, scan, statement or text file **in the page** — no download, and, for a file picked off the device, no upload either until the user chooses to save it. It exists because the vault's only previous "open" was `Linking.openURL(signedUrl)`, which on web means a file landing in the downloads folder just to be looked at once.
+
+Four decisions shape it:
+
+- **A URL for the platform, bytes only when text is needed.** `resolveViewerKind` maps a file to exactly one renderer, and `needsBytes` says whether that renderer works from a decoded string. PDFs and images are handed to the browser (or a native `Image`) as a short-lived signed URL — a 12 MB scan is streamed and decoded by the platform, never held in the JS heap. Only CSV/text is downloaded into memory, and only up to `MAX_TEXT_PREVIEW_BYTES`.
+- **File contents never enter the query cache.** Every TanStack query in this app is persisted to AsyncStorage (`services/offline/persister.ts`); a file's bytes written there would blow the browser's storage quota and take the whole cache with it. `useReaderContent` therefore keeps them in component state for exactly as long as the file is open, and revokes the object URL on unmount.
+- **No PDF.js.** Rendering PDF pages ourselves would mean a multi-megabyte web-only dependency and a worker pipeline (the same trade-off refused for OCR above). The browser already has a PDF viewer, so the web build embeds the file in an `<iframe>` and native shows a card that hands it to the system viewer — `InlineFrame.web.tsx` / `InlineFrame.tsx`. iOS browsers get the same card, because WebKit renders only the first page of a framed PDF and a silently broken document is worse than an explicit hand-off.
+- **The delimited views reuse `parseDelimited`.** A CSV opens as a real table — sticky header, RFC 4180 quoting, the same preamble-skipping the import pipeline uses — so what the reader shows and what an import would read are the same parse.
+
+Long files are virtualised (`FlatList` over lines or rows) and search is a literal, index-based scan with highlighting (`text-preview.ts`), so a 40,000-line log opens and jumps between hits without blocking the UI thread.
+
+**One deployment consequence:** the web CSP in `vercel.json` must allow `blob:` in `connect-src` (reading a picked file's bytes) and in `frame-src` (embedding it). Without those the Reader silently shows nothing on the deployed site while working perfectly against a local dev server, which is exactly the sort of bug that only appears in production.
+
 **The safety property that matters:** extraction writes only to the `extracted_*` staging tables. The single path into `financial_transactions` is `useConfirmExtractedRow`, which runs only from an explicit user action, and records `confirmed_financial_transaction_id` back on the staged row so every imported transaction stays traceable to the file it came from. See [OCR_PIPELINE.md](./OCR_PIPELINE.md).
 
 ## A sharp TypeScript edge (worth knowing before touching `src/types/database.ts`)

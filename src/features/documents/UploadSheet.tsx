@@ -11,7 +11,7 @@ import { useToday } from '@/hooks/useToday';
 import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import type { DocumentType } from '@/types/database';
-import { useUploadDocument, type PickedFile } from '@/features/documents/api';
+import { useUploadDocument, type PickedFile, type UploadedDocument } from '@/features/documents/api';
 
 export const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
   { value: 'bank_statement', label: 'Statement' },
@@ -27,6 +27,12 @@ export interface UploadSheetProps {
   file: PickedFile | null;
   /** Preselects the type so a Scan-screen photo lands as "Receipt" rather than the generic default. */
   defaultDocumentType?: DocumentType;
+  /**
+   * Called once the file is in the vault — including when it turned out to be
+   * a duplicate, since the stored row is what the caller wanted either way.
+   * The Reader uses it to switch from the on-device file to the saved one.
+   */
+  onUploaded?: (result: UploadedDocument) => void;
   onClose: () => void;
 }
 
@@ -36,7 +42,12 @@ export interface UploadSheetProps {
  * screen (capture then review), so a file taken from either place gets the
  * same metadata and duplicate-detection behaviour.
  */
-export function UploadSheet({ file, defaultDocumentType = 'bank_statement', onClose }: UploadSheetProps) {
+export function UploadSheet({
+  file,
+  defaultDocumentType = 'bank_statement',
+  onUploaded,
+  onClose,
+}: UploadSheetProps) {
   const { today } = useToday();
   const uploadDocument = useUploadDocument();
 
@@ -67,6 +78,8 @@ export function UploadSheet({ file, defaultDocumentType = 'bank_statement', onCl
       institution,
       documentDate,
     });
+
+    onUploaded?.(result);
 
     if (result.wasDuplicate) {
       // Not an error: the file is already safely stored, and telling the user

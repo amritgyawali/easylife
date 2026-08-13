@@ -1,6 +1,6 @@
 # Amrit LifeOS
 
-A free-first personal life-management app — schedule, tasks, habits, notes, finance (double-entry ledger), loans, investments, documents, and OCR bank-statement import — built for personal use in Nepal, running from one Expo codebase on Android, iOS, web, and desktop browsers.
+A free-first personal life-management app — schedule, tasks, habits, notes, finance (double-entry ledger), loans, investments, documents with an in-app reader, and OCR bank-statement import — built for personal use in Nepal, running from one Expo codebase on Android, iOS, web, and desktop browsers.
 
 The product name is configurable in one place: `src/constants/app.ts` (`APP_NAME`).
 
@@ -11,6 +11,7 @@ The product name is configurable in one place: `src/constants/app.ts` (`APP_NAME
 > - **Phase 3 (Finance)** — accounts with ledger-derived balances, double-entry income/expense/transfer posting, categories, counterparties, and monthly reports.
 > - **Phase 4 (Loans & investments)** — People with net positions, loans with event-derived balances, investments with manual valuations, savings goals, cross-module net worth, and multi-currency transactions with user-recorded exchange rates.
 > - **Phase 5 (Documents & extraction)** — private document vault with content-hash deduplication, CSV/TSV statement import with per-bank column mapping, reconciliation, duplicate and counterparty matching, and a review queue.
+> - **Reader** — a full-page document reader (`/reader`): drop or pick a PDF, scan, statement or text file and read it in the app without downloading it, or open anything already in the vault through a short-lived private link. PDFs embed in the page on web, images zoom and rotate, CSV/TSV open as a real table, and text and tables both support find-with-highlighting. Desktop gets a library rail beside the document; phones get a single pane that swaps between the two.
 > - **Phase 6 (Sync & exports)** — a live offline-first layer: the query cache is persisted to device storage so the app is fully usable with no connection, writes made offline queue and auto-sync to Supabase on reconnect, and an always-visible banner reports the state. Plus CSV transaction export and full-account JSON backup (Settings → Data & backup), the conflict-resolution and outbox engines as pure unit-tested modules, and a "Sync & notifications" screen for resolving cross-device conflicts.
 > - **Phase 7 (Deployment & hardening)** — `vercel.json` with security headers (CSP scoped to Supabase, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and immutable-asset cache rules; the web export builds cleanly to `dist/`.
 > - **Quick add + durable offline capture** — a floating ＋ on every screen captures a task or note in two taps; captures write through a persisted outbox so they appear instantly, survive a full app restart, and sync to Supabase on reconnect (idempotent, keyed on the client-generated id).

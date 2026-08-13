@@ -3,7 +3,10 @@ import { Platform, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { spacing } from '@/constants/theme';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { InlineMessage } from '@/components/ui/InlineMessage';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List, ListRow } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -154,6 +157,8 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
     <FormSheet
       visible={visible}
       title="Import a statement"
+      subtitle="Read it, check the columns, then review every row before it posts."
+      size="lg"
       onClose={() => {
         wizard.reset();
         onClose();
@@ -181,16 +186,13 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
             Photograph or choose a photo of a statement page, choose a CSV/PDF export, or choose an image
             straight from your files — text is read automatically and turned into a table below.
           </ThemedText>
-          <ThemedText variant="caption" tone="muted">
-            Works best on a clear, flat photo of a printed transaction table. A single receipt won&apos;t have
-            rows to find — use Scan → File a document for those instead.
-          </ThemedText>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {Platform.OS !== 'web' ? (
               <Button
                 label="Take photo"
                 variant="secondary"
+                icon="camera-outline"
                 loading={wizard.isReading}
                 onPress={() => void handleCapture(true)}
               />
@@ -198,26 +200,34 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
             <Button
               label="Choose photo"
               variant="secondary"
+              icon="image-outline"
               loading={wizard.isReading}
               onPress={() => void handleCapture(false)}
             />
-            <Button label="Choose file" loading={wizard.isReading} onPress={() => void handlePick()} />
+            <Button
+              label="Choose file"
+              icon="document-outline"
+              loading={wizard.isReading}
+              onPress={() => void handlePick()}
+            />
           </View>
+
+          <InlineMessage
+            icon="bulb-outline"
+            message="Works best on a clear, flat photo of a printed transaction table. A single receipt won't have rows to find — use Scan → File a document for those instead."
+          />
         </>
       ) : null}
 
-      {wizard.error ? (
-        <ThemedText variant="body" tone="negative" accessibilityLiveRegion="polite">
-          {wizard.error}
-        </ThemedText>
-      ) : null}
+      {wizard.error ? <InlineMessage tone="negative" message={wizard.error} /> : null}
 
       {wizard.table && !wizard.preview ? (
         <>
           {accountOptions.length === 0 ? (
-            <ThemedText variant="body" tone="negative">
-              Add an account first — imported transactions have to post somewhere.
-            </ThemedText>
+            <InlineMessage
+              tone="negative"
+              message="Add an account first — imported transactions have to post somewhere."
+            />
           ) : (
             <OptionGroup
               label="Statement is for"
@@ -234,12 +244,10 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
             placeholder="e.g. NIC Asia"
           />
 
-          <ThemedText variant="label" tone="muted" weight="semibold">
-            WHAT EACH COLUMN MEANS
-          </ThemedText>
-          <ThemedText variant="caption" tone="muted">
-            Checked automatically — correct anything that looks wrong before previewing.
-          </ThemedText>
+          <SectionHeader
+            title="What each column means"
+            description="Detected automatically — correct anything that looks wrong before previewing."
+          />
 
           {wizard.table.header.map((column) => (
             <OptionGroup
@@ -251,18 +259,22 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
             />
           ))}
 
-          <MoneyField
-            label="Opening balance (optional)"
-            value={openingBalance}
-            onChangeText={setOpeningBalance}
-            currency={currency}
-          />
-          <MoneyField
-            label="Closing balance (optional)"
-            value={closingBalance}
-            onChangeText={setClosingBalance}
-            currency={currency}
-          />
+          <FormRow>
+            <MoneyField
+              label="Opening balance"
+              value={openingBalance}
+              onChangeText={setOpeningBalance}
+              currency={currency}
+              helpText="Optional"
+            />
+            <MoneyField
+              label="Closing balance"
+              value={closingBalance}
+              onChangeText={setClosingBalance}
+              currency={currency}
+              helpText="Optional"
+            />
+          </FormRow>
           <ThemedText variant="caption" tone="muted">
             Given both, the import checks that opening + credits − debits reaches the closing balance, and
             tells you the exact difference if it doesn&apos;t.
@@ -292,25 +304,25 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
               ) : null}
             </View>
 
-            <ThemedText
-              variant="caption"
+            <InlineMessage
               tone={
                 wizard.preview.reconciliation.status === 'balanced'
                   ? 'positive'
                   : wizard.preview.reconciliation.status === 'mismatch'
                     ? 'negative'
-                    : 'muted'
+                    : 'info'
               }
-            >
-              {wizard.preview.reconciliation.status === 'balanced'
-                ? 'Reconciles against the closing balance.'
-                : wizard.preview.reconciliation.status === 'mismatch'
-                  ? `Off by ${formatMoney(
-                      Math.abs(wizard.preview.reconciliation.differenceMinor ?? 0),
-                      currency
-                    )} — some rows are probably missing or misread.`
-                  : 'No balances given, so nothing was reconciled.'}
-            </ThemedText>
+              message={
+                wizard.preview.reconciliation.status === 'balanced'
+                  ? 'Reconciles against the closing balance.'
+                  : wizard.preview.reconciliation.status === 'mismatch'
+                    ? `Off by ${formatMoney(
+                        Math.abs(wizard.preview.reconciliation.differenceMinor ?? 0),
+                        currency
+                      )} — some rows are probably missing or misread.`
+                    : 'No balances given, so nothing was reconciled.'
+              }
+            />
 
             {wizard.preview.continuityBreaks.length > 0 ? (
               <ThemedText variant="caption" tone="warning">
@@ -321,19 +333,23 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
             ) : null}
           </Card>
 
-          {wizard.preview.statement.rows.slice(0, 5).map((row) => (
-            <View key={row.rowNumber} style={{ gap: spacing.xxs }}>
-              <ThemedText variant="caption" numberOfLines={1}>
-                {row.transactionDate ?? 'no date'} · {row.rawDescription ?? 'no description'}
-              </ThemedText>
-              <ThemedText
-                variant="caption"
-                tone={row.signedAmountMinor && row.signedAmountMinor > 0 ? 'positive' : 'negative'}
-              >
-                {row.signedAmountMinor === null ? 'no amount' : formatMoney(row.signedAmountMinor, currency)}
-              </ThemedText>
-            </View>
-          ))}
+          <List>
+            {wizard.preview.statement.rows.slice(0, 5).map((row) => (
+              <ListRow
+                key={row.rowNumber}
+                title={row.rawDescription ?? 'No description'}
+                subtitle={row.transactionDate ?? 'No date'}
+                value={
+                  row.signedAmountMinor === null
+                    ? '—'
+                    : formatMoney(row.signedAmountMinor, currency)
+                }
+                valueTone={
+                  row.signedAmountMinor && row.signedAmountMinor > 0 ? 'positive' : 'negative'
+                }
+              />
+            ))}
+          </List>
           {wizard.preview.statement.rows.length > 5 ? (
             <ThemedText variant="caption" tone="muted">
               …and {wizard.preview.statement.rows.length - 5} more. Everything is reviewable in the next step.
@@ -342,11 +358,7 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
         </>
       ) : null}
 
-      {saveError ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {saveError}
-        </ThemedText>
-      ) : null}
+      {saveError ? <InlineMessage tone="negative" message={saveError} /> : null}
     </FormSheet>
   );
 }

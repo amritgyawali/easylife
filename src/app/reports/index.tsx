@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { useTheme } from '@/hooks/useTheme';
-import { radius, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { List, ListRow } from '@/components/ui/List';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -12,6 +16,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { useToday } from '@/hooks/useToday';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { formatMoney } from '@/utils/money';
 import { useCategories } from '@/features/finance/categories-api';
 import { useTransactions } from '@/features/finance/transactions-api';
@@ -29,6 +34,7 @@ const TREND_MONTHS = 6;
 
 export default function ReportsScreen() {
   const { today } = useToday();
+  const compact = useCompactLayout();
   const transactionsQuery = useTransactions();
   const { data: categories } = useCategories();
 
@@ -71,20 +77,29 @@ export default function ReportsScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={() => void transactionsQuery.refetch()}
       refreshing={transactionsQuery.isRefetching}
       header={
         <>
-          <ScreenHeader title="Reports" subtitle={range.label} />
-          <OptionGroup options={monthOptions} value={monthsBack} onChange={setMonthsBack} />
-          {currencyOptions.length > 1 ? (
-            <OptionGroup
-              label="Currency"
-              options={currencyOptions}
-              value={activeCurrency ?? ''}
-              onChange={setCurrency}
-            />
-          ) : null}
+          <ScreenHeader
+            eyebrow="Money"
+            title="Reports"
+            subtitle={`${range.label} · transfers between your own accounts are excluded`}
+          />
+          <View style={{ flexDirection: compact ? 'column' : 'row', gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <OptionGroup options={monthOptions} value={monthsBack} onChange={setMonthsBack} />
+            </View>
+            {currencyOptions.length > 1 ? (
+              <OptionGroup
+                variant="segmented"
+                options={currencyOptions}
+                value={activeCurrency ?? ''}
+                onChange={setCurrency}
+              />
+            ) : null}
+          </View>
         </>
       }
     >
@@ -94,106 +109,90 @@ export default function ReportsScreen() {
         <ErrorState error={transactionsQuery.error} onRetry={() => void transactionsQuery.refetch()} />
       ) : !summary || !activeCurrency ? (
         <EmptyState
+          icon="bar-chart-outline"
           title="Nothing to report for this month"
           description="Record some income or spending and the breakdown appears here. Transfers between your own accounts are always excluded."
         />
       ) : (
         <>
-          <Card style={{ gap: spacing.md }}>
-            <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-              <Total
-                label="Income"
+          <Card>
+            <StatRow>
+              <Stat
+                label="Money in"
                 value={formatMoney(summary.incomeMinor, activeCurrency)}
                 tone="positive"
+                icon="arrow-down"
+                size="lg"
               />
-              <Total
-                label="Spent"
+              <Stat
+                label="Money out"
                 value={formatMoney(summary.expenseMinor, activeCurrency)}
                 tone="negative"
+                icon="arrow-up"
+                size="lg"
               />
-            </View>
-            <View style={{ gap: spacing.xxs }}>
-              <ThemedText variant="caption" tone="muted">
-                {summary.netMinor >= 0 ? 'Left over' : 'Overspent by'}
-              </ThemedText>
-              <ThemedText variant="title" tone={summary.netMinor >= 0 ? 'positive' : 'negative'}>
-                {formatMoney(Math.abs(summary.netMinor), activeCurrency)}
-              </ThemedText>
-            </View>
+              <Stat
+                label={summary.netMinor >= 0 ? 'Left over' : 'Overspent by'}
+                value={formatMoney(Math.abs(summary.netMinor), activeCurrency)}
+                tone={summary.netMinor >= 0 ? 'positive' : 'negative'}
+                hint={`${summary.transactionCount} transactions`}
+                size="lg"
+              />
+            </StatRow>
           </Card>
 
-          <View style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              WHERE IT WENT
-            </ThemedText>
-            {expenseTotals.length === 0 ? (
-              <Card>
-                <ThemedText variant="body" tone="muted">
-                  No spending recorded this month.
-                </ThemedText>
-              </Card>
-            ) : (
-              <Card style={{ gap: spacing.md }}>
-                {expenseTotals.map((total) => (
-                  <CategoryBar
-                    key={total.categoryId ?? 'uncategorised'}
-                    label={
-                      total.categoryId
-                        ? (categoryName.get(total.categoryId) ?? 'Removed category')
-                        : 'Uncategorised'
+          <Grid minColumnWidth={360} maxColumns={2}>
+            <View style={{ gap: spacing.sm }}>
+              <SectionHeader title="Where it went" />
+              {expenseTotals.length === 0 ? (
+                <Card>
+                  <ThemedText variant="body" tone="muted">
+                    No spending recorded this month.
+                  </ThemedText>
+                </Card>
+              ) : (
+                <Card style={{ gap: spacing.lg }}>
+                  {expenseTotals.map((total) => (
+                    <CategoryBar
+                      key={total.categoryId ?? 'uncategorised'}
+                      label={
+                        total.categoryId
+                          ? (categoryName.get(total.categoryId) ?? 'Removed category')
+                          : 'Uncategorised'
+                      }
+                      amount={formatMoney(total.totalMinor, total.currency)}
+                      share={total.share}
+                    />
+                  ))}
+                </Card>
+              )}
+            </View>
+
+            <View style={{ gap: spacing.sm }}>
+              <SectionHeader title={`Last ${TREND_MONTHS} months`} />
+              <List>
+                {trend.map((month) => (
+                  <ListRow
+                    key={month.label}
+                    title={month.label}
+                    trailing={
+                      <View style={{ alignItems: 'flex-end', gap: spacing.xxs }}>
+                        <ThemedText variant="label" tone="positive" numeric>
+                          +{formatMoney(month.incomeMinor, activeCurrency, { showCurrency: false })}
+                        </ThemedText>
+                        <ThemedText variant="label" tone="negative" numeric>
+                          -{formatMoney(month.expenseMinor, activeCurrency, { showCurrency: false })}
+                        </ThemedText>
+                      </View>
                     }
-                    amount={formatMoney(total.totalMinor, total.currency)}
-                    share={total.share}
                   />
                 ))}
-              </Card>
-            )}
-          </View>
-
-          <View style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              LAST {TREND_MONTHS} MONTHS
-            </ThemedText>
-            <Card padded={false}>
-              {trend.map((month) => (
-                <View
-                  key={month.label}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.md,
-                    padding: spacing.md,
-                  }}
-                >
-                  <ThemedText variant="body" style={{ flex: 1 }}>
-                    {month.label}
-                  </ThemedText>
-                  <ThemedText variant="caption" tone="positive">
-                    +{formatMoney(month.incomeMinor, activeCurrency, { showCurrency: false })}
-                  </ThemedText>
-                  <ThemedText variant="caption" tone="negative">
-                    -{formatMoney(month.expenseMinor, activeCurrency, { showCurrency: false })}
-                  </ThemedText>
-                </View>
-              ))}
-            </Card>
-          </View>
+              </List>
+            </View>
+          </Grid>
         </>
       )}
     </Screen>
-  );
-}
-
-function Total({ label, value, tone }: { label: string; value: string; tone: 'positive' | 'negative' }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-      <ThemedText variant="subtitle" tone={tone}>
-        {value}
-      </ThemedText>
-    </View>
   );
 }
 
@@ -202,35 +201,22 @@ function Total({ label, value, tone }: { label: string; value: string; tone: 'po
  * next to the bar so the value never depends on reading the bar's width.
  */
 function CategoryBar({ label, amount, share }: { label: string; amount: string; share: number }) {
-  const theme = useTheme();
   const percent = Math.round(share * 100);
 
   return (
     <View style={{ gap: spacing.xs }} accessibilityLabel={`${label}: ${amount}, ${percent} percent`}>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <ThemedText variant="body" style={{ flex: 1 }} numberOfLines={1}>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'baseline' }}>
+        <ThemedText variant="label" weight="medium" style={{ flex: 1 }} numberOfLines={1}>
           {label}
         </ThemedText>
-        <ThemedText variant="body" weight="semibold">
+        <ThemedText variant="label" weight="semibold" numeric>
           {amount}
         </ThemedText>
-        <ThemedText variant="body" tone="muted">
+        <ThemedText variant="caption" tone="muted" numeric>
           {percent}%
         </ThemedText>
       </View>
-      <View
-        accessible={false}
-        style={{ height: 6, borderRadius: radius.full, backgroundColor: theme.colors.surfaceAlt }}
-      >
-        <View
-          style={{
-            height: 6,
-            width: `${Math.max(percent, 1)}%`,
-            borderRadius: radius.full,
-            backgroundColor: theme.colors.primary,
-          }}
-        />
-      </View>
+      <ProgressBar value={share} height={6} />
     </View>
   );
 }

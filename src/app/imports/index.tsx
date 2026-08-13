@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -42,13 +43,22 @@ export default function ImportsScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={() => void refetch()}
       refreshing={isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Records"
           title="Imports"
-          subtitle="Bring a bank or wallet statement in. Nothing is added to your ledger until you confirm it."
-          action={<Button label="New import" size="sm" onPress={() => setWizardOpen(true)} />}
+          subtitle="Nothing reaches your ledger until you confirm it."
+          action={
+            <Button
+              label="New import"
+              size="sm"
+              icon="cloud-upload-outline"
+              onPress={() => setWizardOpen(true)}
+            />
+          }
         />
       }
     >
@@ -58,30 +68,43 @@ export default function ImportsScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : sorted.length === 0 ? (
         <EmptyState
+          icon="cloud-upload-outline"
           title="No imports yet"
           description="Export a CSV statement from your bank or wallet and bring it in here."
           actionLabel="New import"
           onAction={() => setWizardOpen(true)}
         />
       ) : (
-        sorted.map((statement) => (
-          <Card key={statement.id} style={{ gap: spacing.sm }}>
+        <Grid minColumnWidth={320}>
+        {sorted.map((statement) => (
+          <Card key={statement.id} style={{ gap: spacing.md, height: '100%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-              <View style={{ flex: 1, gap: spacing.xxs }}>
-                <ThemedText variant="subtitle">{statement.institution ?? 'Statement'}</ThemedText>
+              <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                <ThemedText variant="subtitle" numberOfLines={1}>
+                  {statement.institution ?? 'Statement'}
+                </ThemedText>
                 <ThemedText variant="caption" tone="muted">
                   {statement.statement_start && statement.statement_end
                     ? `${formatIsoDate(statement.statement_start)} – ${formatIsoDate(statement.statement_end)}`
                     : 'Period not stated'}
                 </ThemedText>
               </View>
-              <Button label="Review" size="sm" onPress={() => router.push(`/imports/${statement.id}`)} />
+              <Button
+                label="Review"
+                size="sm"
+                icon="arrow-forward"
+                iconPosition="trailing"
+                onPress={() => router.push(`/imports/${statement.id}`)}
+              />
             </View>
+
+            <View style={{ flex: 1 }} />
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               <Badge
                 label={statement.reconciliation_status}
                 tone={RECONCILIATION_TONE[statement.reconciliation_status] ?? 'neutral'}
+                dot
               />
               {statement.currency ? <Badge label={statement.currency} /> : null}
               {statement.reconciliation_diff_minor ? (
@@ -95,7 +118,8 @@ export default function ImportsScreen() {
               ) : null}
             </View>
           </Card>
-        ))
+        ))}
+        </Grid>
       )}
 
       <ImportWizardSheet visible={wizardOpen} onClose={() => setWizardOpen(false)} />

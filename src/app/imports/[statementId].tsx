@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
+import { InlineMessage } from '@/components/ui/InlineMessage';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +61,7 @@ export default function ImportReviewScreen() {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: counterparties } = useCounterparties();
+  const router = useRouter();
 
   const confirmRow = useConfirmExtractedRow();
   const rejectRow = useRejectExtractedRow();
@@ -119,12 +122,16 @@ export default function ImportReviewScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={() => void refetch()}
       refreshing={isRefetching}
       header={
         <>
           <ScreenHeader
+            eyebrow="Imports"
             title="Review import"
+            onBack={() => router.back()}
+            backLabel="Back to imports"
             subtitle={
               statement?.statement_start && statement.statement_end
                 ? `${statement.institution ?? 'Statement'} · ${formatIsoDate(statement.statement_start)} – ${formatIsoDate(statement.statement_end)}`
@@ -132,6 +139,7 @@ export default function ImportReviewScreen() {
             }
           />
           <OptionGroup
+            variant="segmented"
             options={[
               { value: 'pending', label: `To review (${counts.pending})` },
               { value: 'confirmed', label: `Added (${counts.confirmed})` },
@@ -144,16 +152,14 @@ export default function ImportReviewScreen() {
       }
     >
       {statement?.reconciliation_status === 'mismatch' ? (
-        <Card style={{ gap: spacing.xs }}>
-          <ThemedText variant="body" tone="negative">
-            This statement doesn&apos;t reconcile
-          </ThemedText>
-          <ThemedText variant="caption" tone="muted">
-            Opening plus credits minus debits is off by{' '}
-            {formatMoney(Math.abs(statement.reconciliation_diff_minor ?? 0), currency)} against the stated
-            closing balance. Some rows are probably missing or misread — worth checking before confirming.
-          </ThemedText>
-        </Card>
+        <InlineMessage
+          tone="warning"
+          title="This statement doesn't reconcile"
+          message={`Opening plus credits minus debits is off by ${formatMoney(
+            Math.abs(statement.reconciliation_diff_minor ?? 0),
+            currency
+          )} against the stated closing balance. Some rows are probably missing or misread — worth checking before confirming.`}
+        />
       ) : null}
 
       {!statement?.account_id ? (
@@ -168,11 +174,7 @@ export default function ImportReviewScreen() {
         />
       ) : null}
 
-      {actionError ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {actionError}
-        </ThemedText>
-      ) : null}
+      {actionError ? <InlineMessage tone="negative" message={actionError} /> : null}
 
       {isLoading ? (
         <SkeletonList rows={5} />
@@ -180,6 +182,7 @@ export default function ImportReviewScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : visible.length === 0 ? (
         <EmptyState
+          icon={filter === 'confirmed' ? 'checkmark-done-outline' : 'documents-outline'}
           title={
             filter === 'pending'
               ? counts.pending === 0 && counts.confirmed > 0
@@ -196,7 +199,8 @@ export default function ImportReviewScreen() {
           }
         />
       ) : (
-        visible.map((row) => (
+        <Grid minColumnWidth={340}>
+        {visible.map((row) => (
           <ReviewRow
             key={row.id}
             row={row}
@@ -209,7 +213,8 @@ export default function ImportReviewScreen() {
             onConfirm={() => void handleConfirm(row)}
             onReject={() => rejectRow.mutate(row.id)}
           />
-        ))
+        ))}
+        </Grid>
       )}
     </Screen>
   );
@@ -240,10 +245,10 @@ function ReviewRow({
   const pending = row.review_status === 'pending';
 
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card style={{ gap: spacing.md, height: '100%' }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-        <View style={{ flex: 1, gap: spacing.xxs }}>
-          <ThemedText variant="body" numberOfLines={2}>
+        <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+          <ThemedText variant="body" weight="medium" numberOfLines={2}>
             {row.raw_description || 'No description'}
           </ThemedText>
           <ThemedText variant="caption" tone="muted">
@@ -251,7 +256,7 @@ function ReviewRow({
             {row.reference ? ` · ${row.reference}` : ''}
           </ThemedText>
         </View>
-        <ThemedText variant="subtitle" tone={isIncome ? 'positive' : 'negative'}>
+        <ThemedText variant="subtitle" tone={isIncome ? 'positive' : 'negative'} numeric>
           {row.signed_amount_minor === null
             ? '—'
             : `${isIncome ? '+' : '-'}${formatMoney(Math.abs(row.signed_amount_minor), currency)}`}
@@ -274,17 +279,20 @@ function ReviewRow({
       </View>
 
       {!usable ? (
-        <ThemedText variant="caption" tone="negative">
-          This row is missing a date or an amount, so it can&apos;t be added. Skip it and enter it by hand.
-        </ThemedText>
+        <InlineMessage
+          tone="negative"
+          message="This row is missing a date or an amount, so it can't be added. Skip it and enter it by hand."
+        />
       ) : null}
 
       {row.is_duplicate ? (
-        <ThemedText variant="caption" tone="muted">
-          A transaction with this amount and date is already in your ledger. Confirm only if this is genuinely
-          a second one.
-        </ThemedText>
+        <InlineMessage
+          tone="warning"
+          message="A transaction with this amount and date is already in your ledger. Confirm only if this is genuinely a second one."
+        />
       ) : null}
+
+      <View style={{ flex: 1 }} />
 
       {pending ? (
         <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>

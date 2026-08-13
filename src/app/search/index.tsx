@@ -1,24 +1,27 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List, ListRow } from '@/components/ui/List';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { useTasks } from '@/features/tasks/api';
 import { useNotes } from '@/features/notes/api';
 import { useTransactions } from '@/features/finance/transactions-api';
 import { kindLabel, search } from '@/features/search/search';
 
+/** Icon per result kind, so the list is scannable without reading each badge. */
+const RESULT_ICON: Record<string, 'checkbox-outline' | 'document-text-outline' | 'swap-vertical-outline'> = {
+  task: 'checkbox-outline',
+  note: 'document-text-outline',
+  transaction: 'swap-vertical-outline',
+};
+
 /** One place to look for anything: tasks, notes and transactions at once. */
 export default function SearchScreen() {
-  const theme = useTheme();
   const router = useRouter();
 
   const { data: tasks } = useTasks();
@@ -41,7 +44,7 @@ export default function SearchScreen() {
     <Screen
       header={
         <>
-          <ScreenHeader title="Search" subtitle="Tasks, notes and transactions." />
+          <ScreenHeader title="Search" subtitle="Tasks, notes and transactions, all at once." />
           <SearchInput
             value={query}
             onChangeText={setQuery}
@@ -53,35 +56,35 @@ export default function SearchScreen() {
       }
     >
       {query.trim().length === 0 ? (
-        <EmptyState title="Start typing" description="Results appear as you type." />
+        <EmptyState
+          icon="search-outline"
+          title="Start typing"
+          description="Results appear as you type — across tasks, notes and your ledger."
+        />
       ) : results.length === 0 ? (
-        <EmptyState title="No matches" description={`Nothing found for "${query.trim()}".`} />
+        <EmptyState
+          icon="search-outline"
+          title="No matches"
+          description={`Nothing found for "${query.trim()}".`}
+        />
       ) : (
-        <Card padded={false}>
-          {results.map((result) => (
-            <Pressable
-              key={`${result.kind}-${result.id}`}
-              accessibilityRole="link"
-              accessibilityLabel={`${kindLabel(result.kind)}: ${result.title}`}
-              onPress={() => router.push(result.href)}
-              style={({ pressed }) => ({
-                gap: spacing.xs,
-                padding: spacing.md,
-                backgroundColor: pressed ? theme.colors.surfaceAlt : 'transparent',
-              })}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <ThemedText variant="body" style={{ flex: 1 }} numberOfLines={1}>
-                  {result.title}
-                </ThemedText>
-                <Badge label={kindLabel(result.kind)} />
-              </View>
-              <ThemedText variant="caption" tone="muted" numberOfLines={1}>
-                {result.subtitle}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </Card>
+        <>
+          <SectionHeader title="Results" count={results.length} />
+          <List>
+            {results.map((result) => (
+              <ListRow
+                key={`${result.kind}-${result.id}`}
+                title={result.title}
+                subtitle={result.subtitle}
+                icon={RESULT_ICON[result.kind] ?? 'search-outline'}
+                onPress={() => router.push(result.href)}
+                accessibilityLabel={`${kindLabel(result.kind)}: ${result.title}`}
+                chevron
+                trailing={<Badge label={kindLabel(result.kind)} />}
+              />
+            ))}
+          </List>
+        </>
       )}
     </Screen>
   );

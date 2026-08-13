@@ -1,11 +1,10 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useLayout } from '@/hooks/useCompactLayout';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { radius, spacing } from '@/constants/theme';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';

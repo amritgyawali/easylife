@@ -48,7 +48,10 @@ export function focusRing(color: string, visible: boolean, offset = 2): ViewStyl
 }
 
 /** Smooth hover/press feedback on web; native uses its own press ripple/opacity. */
-export function transition(properties = 'background-color, border-color, color, transform, opacity, box-shadow', ms = 140): ViewStyle {
+export function transition(
+  properties = 'background-color, border-color, color, transform, opacity, box-shadow',
+  ms = 140
+): ViewStyle {
   return webStyle({
     transitionProperty: properties,
     transitionDuration: `${ms}ms`,

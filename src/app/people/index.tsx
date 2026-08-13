@@ -135,74 +135,76 @@ export default function PeopleScreen() {
         />
       ) : (
         <Grid minColumnWidth={320}>
-        {matching.map((person) => {
-          const positions = exposureByPerson.get(person.id) ?? [];
+          {matching.map((person) => {
+            const positions = exposureByPerson.get(person.id) ?? [];
 
-          return (
-            <Card key={person.id} style={{ gap: spacing.md, height: '100%' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
-                  <ThemedText variant="subtitle" numberOfLines={1}>
-                    {person.display_name}
+            return (
+              <Card key={person.id} style={{ gap: spacing.md, height: '100%' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                    <ThemedText variant="subtitle" numberOfLines={1}>
+                      {person.display_name}
+                    </ThemedText>
+                    {person.phone || person.email ? (
+                      <ThemedText variant="caption" tone="muted" numberOfLines={1}>
+                        {[person.phone, person.email].filter(Boolean).join(' · ')}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                  <IconButton
+                    icon="create-outline"
+                    accessibilityLabel={`Edit ${person.display_name}`}
+                    onPress={() => openSheet(person)}
+                  />
+                </View>
+
+                {positions.length > 0 ? (
+                  <View style={{ gap: spacing.xs }}>
+                    {positions.map((position) => (
+                      <ThemedText
+                        key={position.currency}
+                        variant="body"
+                        weight="semibold"
+                        numeric
+                        tone={
+                          position.netMinor === 0 ? 'muted' : position.netMinor > 0 ? 'positive' : 'negative'
+                        }
+                      >
+                        {position.netMinor === 0
+                          ? `Settled (${position.currency})`
+                          : position.netMinor > 0
+                            ? `Owes you ${formatMoney(position.netMinor, position.currency)}`
+                            : `You owe ${formatMoney(-position.netMinor, position.currency)}`}
+                      </ThemedText>
+                    ))}
+                  </View>
+                ) : (
+                  <ThemedText variant="caption" tone="muted">
+                    No open loans.
                   </ThemedText>
-                  {person.phone || person.email ? (
-                    <ThemedText variant="caption" tone="muted" numberOfLines={1}>
-                      {[person.phone, person.email].filter(Boolean).join(' · ')}
-                    </ThemedText>
-                  ) : null}
-                </View>
-                <IconButton
-                  icon="create-outline"
-                  accessibilityLabel={`Edit ${person.display_name}`}
-                  onPress={() => openSheet(person)}
-                />
-              </View>
+                )}
 
-              {positions.length > 0 ? (
-                <View style={{ gap: spacing.xs }}>
-                  {positions.map((position) => (
-                    <ThemedText
-                      key={position.currency}
-                      variant="body"
-                      weight="semibold"
-                      numeric
-                      tone={
-                        position.netMinor === 0 ? 'muted' : position.netMinor > 0 ? 'positive' : 'negative'
-                      }
-                    >
-                      {position.netMinor === 0
-                        ? `Settled (${position.currency})`
-                        : position.netMinor > 0
-                          ? `Owes you ${formatMoney(position.netMinor, position.currency)}`
-                          : `You owe ${formatMoney(-position.netMinor, position.currency)}`}
-                    </ThemedText>
-                  ))}
-                </View>
-              ) : (
-                <ThemedText variant="caption" tone="muted">
-                  No open loans.
-                </ThemedText>
-              )}
-
-              <View style={{ flex: 1 }} />
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
-                <Badge label={person.kind} icon="person-outline" />
-                {(transactionCount.get(person.id) ?? 0) > 0 ? (
-                  <Badge label={`${transactionCount.get(person.id)} transactions`} tone="primary" />
-                ) : null}
                 <View style={{ flex: 1 }} />
-                <Button
-                  label="New loan"
-                  size="sm"
-                  variant="secondary"
-                  icon="add"
-                  onPress={() => setLoanFor(person.id)}
-                />
-              </View>
-            </Card>
-          );
-        })}
+
+                <View
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}
+                >
+                  <Badge label={person.kind} icon="person-outline" />
+                  {(transactionCount.get(person.id) ?? 0) > 0 ? (
+                    <Badge label={`${transactionCount.get(person.id)} transactions`} tone="primary" />
+                  ) : null}
+                  <View style={{ flex: 1 }} />
+                  <Button
+                    label="New loan"
+                    size="sm"
+                    variant="secondary"
+                    icon="add"
+                    onPress={() => setLoanFor(person.id)}
+                  />
+                </View>
+              </Card>
+            );
+          })}
         </Grid>
       )}
 

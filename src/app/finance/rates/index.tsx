@@ -126,7 +126,9 @@ function RateFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
       title="Add exchange rate"
       subtitle="Used to combine currencies in net worth and transfers."
       onClose={onClose}
-      footer={<FormActions pending={saveRate.isPending} onSave={() => void handleSave()} saveLabel="Save rate" />}
+      footer={
+        <FormActions pending={saveRate.isPending} onSave={() => void handleSave()} saveLabel="Save rate" />
+      }
     >
       <FormRow>
         <OptionGroup

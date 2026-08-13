@@ -21,7 +21,11 @@ export interface TransactionFormSheetProps {
   defaultAccountId?: string | null;
 }
 
-const KIND_OPTIONS: { value: LedgerTransactionKind; label: string; icon: 'arrow-up' | 'arrow-down' | 'swap-horizontal' }[] = [
+const KIND_OPTIONS: {
+  value: LedgerTransactionKind;
+  label: string;
+  icon: 'arrow-up' | 'arrow-down' | 'swap-horizontal';
+}[] = [
   { value: 'expense', label: 'Expense', icon: 'arrow-up' },
   { value: 'income', label: 'Income', icon: 'arrow-down' },
   { value: 'transfer', label: 'Transfer', icon: 'swap-horizontal' },
@@ -132,7 +136,9 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
   }));
 
   const destinationOptions = accountOptions.filter((option) => option.value !== accountId);
-  const kindOptions = canTransfer ? KIND_OPTIONS : KIND_OPTIONS.filter((option) => option.value !== 'transfer');
+  const kindOptions = canTransfer
+    ? KIND_OPTIONS
+    : KIND_OPTIONS.filter((option) => option.value !== 'transfer');
 
   return (
     <FormSheet
@@ -159,9 +165,7 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
           setCategoryId('');
         }}
       />
-      {!canTransfer ? (
-        <InlineMessage message="Add a second account to move money between accounts." />
-      ) : null}
+      {!canTransfer ? <InlineMessage message="Add a second account to move money between accounts." /> : null}
 
       <MoneyField
         label="Amount"
@@ -196,7 +200,9 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
           {destinationOptions.length === 0 ? (
             <InlineMessage
               tone="negative"
-              message={'Choose a "From" account first, or add another account — there\u2019s nothing left to transfer to.'}
+              message={
+                'Choose a "From" account first, or add another account — there\u2019s nothing left to transfer to.'
+              }
             />
           ) : (
             <OptionGroup

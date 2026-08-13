@@ -200,20 +200,24 @@ export default function ImportReviewScreen() {
         />
       ) : (
         <Grid minColumnWidth={340}>
-        {visible.map((row) => (
-          <ReviewRow
-            key={row.id}
-            row={row}
-            currency={currency}
-            categoryName={row.suggested_category_id ? categoryName.get(row.suggested_category_id) : undefined}
-            counterpartyName={
-              row.suggested_counterparty_id ? counterpartyName.get(row.suggested_counterparty_id) : undefined
-            }
-            busy={confirmRow.isPending || rejectRow.isPending}
-            onConfirm={() => void handleConfirm(row)}
-            onReject={() => rejectRow.mutate(row.id)}
-          />
-        ))}
+          {visible.map((row) => (
+            <ReviewRow
+              key={row.id}
+              row={row}
+              currency={currency}
+              categoryName={
+                row.suggested_category_id ? categoryName.get(row.suggested_category_id) : undefined
+              }
+              counterpartyName={
+                row.suggested_counterparty_id
+                  ? counterpartyName.get(row.suggested_counterparty_id)
+                  : undefined
+              }
+              busy={confirmRow.isPending || rejectRow.isPending}
+              onConfirm={() => void handleConfirm(row)}
+              onReject={() => rejectRow.mutate(row.id)}
+            />
+          ))}
         </Grid>
       )}
     </Screen>

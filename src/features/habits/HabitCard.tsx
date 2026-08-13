@@ -158,11 +158,7 @@ function DayCell({
             width: '100%',
             borderRadius: radius.sm,
             borderWidth: isToday ? 2 : 1,
-            borderColor: done
-              ? theme.colors.positive
-              : isToday
-                ? theme.colors.primary
-                : theme.colors.border,
+            borderColor: done ? theme.colors.positive : isToday ? theme.colors.primary : theme.colors.border,
             backgroundColor: done
               ? theme.colors.positiveSurface
               : scheduled

@@ -185,7 +185,11 @@ function GoalFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
       subtitle="Something to put money aside for."
       onClose={onClose}
       footer={
-        <FormActions pending={createGoal.isPending} onSave={() => void handleSave()} saveLabel="Create goal" />
+        <FormActions
+          pending={createGoal.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Create goal"
+        />
       }
     >
       <TextField
@@ -286,9 +290,7 @@ function GoalEventSheet({
       title={goal.name}
       subtitle="Record money moving in or out of this goal."
       onClose={onClose}
-      footer={
-        <FormActions pending={recordEvent.isPending} onSave={() => void handleSave()} />
-      }
+      footer={<FormActions pending={recordEvent.isPending} onSave={() => void handleSave()} />}
     >
       <OptionGroup
         variant="segmented"

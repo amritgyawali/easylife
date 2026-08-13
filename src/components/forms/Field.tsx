@@ -94,13 +94,15 @@ export interface InputChromeOptions {
  */
 export function inputChrome(
   theme: Theme,
-  { focused = false, invalid = false, disabled = false, multiline = false, size = 'md' }: InputChromeOptions = {}
+  {
+    focused = false,
+    invalid = false,
+    disabled = false,
+    multiline = false,
+    size = 'md',
+  }: InputChromeOptions = {}
 ): TextStyle {
-  const borderColor = invalid
-    ? theme.colors.negative
-    : focused
-      ? theme.colors.primary
-      : theme.colors.border;
+  const borderColor = invalid ? theme.colors.negative : focused ? theme.colors.primary : theme.colors.border;
 
   return {
     minHeight: multiline ? controlHeight.md * 2.4 : size === 'lg' ? controlHeight.lg : controlHeight.md,

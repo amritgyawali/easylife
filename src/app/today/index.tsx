@@ -122,9 +122,7 @@ export default function TodayScreen() {
               ? 'Nothing due today.'
               : `${dueToday.length} ${dueToday.length === 1 ? 'task' : 'tasks'} due`
           }
-          action={
-            <Button label="Add task" size="sm" icon="add" onPress={() => setSheetOpen(true)} />
-          }
+          action={<Button label="Add task" size="sm" icon="add" onPress={() => setSheetOpen(true)} />}
         />
       }
     >
@@ -145,11 +143,7 @@ export default function TodayScreen() {
               />
               <Stat label="Events" value={String(todaysEvents.length)} icon="calendar-outline" />
               {habitsDueToday.length > 0 ? (
-                <Stat
-                  label="Habits"
-                  value={`${habitsDone}/${habitsDueToday.length}`}
-                  icon="repeat-outline"
-                />
+                <Stat label="Habits" value={`${habitsDone}/${habitsDueToday.length}`} icon="repeat-outline" />
               ) : null}
             </StatRow>
           </Card>

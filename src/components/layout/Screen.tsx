@@ -1,5 +1,11 @@
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';

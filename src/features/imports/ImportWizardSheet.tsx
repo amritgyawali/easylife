@@ -339,14 +339,8 @@ export function ImportWizardSheet({ visible, onClose }: ImportWizardSheetProps) 
                 key={row.rowNumber}
                 title={row.rawDescription ?? 'No description'}
                 subtitle={row.transactionDate ?? 'No date'}
-                value={
-                  row.signedAmountMinor === null
-                    ? '—'
-                    : formatMoney(row.signedAmountMinor, currency)
-                }
-                valueTone={
-                  row.signedAmountMinor && row.signedAmountMinor > 0 ? 'positive' : 'negative'
-                }
+                value={row.signedAmountMinor === null ? '—' : formatMoney(row.signedAmountMinor, currency)}
+                valueTone={row.signedAmountMinor && row.signedAmountMinor > 0 ? 'positive' : 'negative'}
               />
             ))}
           </List>

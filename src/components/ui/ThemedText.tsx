@@ -13,7 +13,8 @@ export type TextVariant =
   | 'caption'
   /** Small, spaced, uppercase section heading — "THIS MONTH", "DUE TODAY". */
   | 'overline';
-export type TextTone = 'default' | 'muted' | 'subtle' | 'inverse' | 'positive' | 'negative' | 'warning' | 'primary';
+export type TextTone =
+  'default' | 'muted' | 'subtle' | 'inverse' | 'positive' | 'negative' | 'warning' | 'primary';
 
 export interface ThemedTextProps extends TextProps {
   variant?: TextVariant;

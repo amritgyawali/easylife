@@ -167,13 +167,7 @@ export function Button({
  * Horizontal action row that turns into a stack on very narrow screens, so a
  * "Cancel / Save" pair never squeezes its labels to two characters wide.
  */
-export function ButtonRow({
-  children,
-  stacked = false,
-}: {
-  children: React.ReactNode;
-  stacked?: boolean;
-}) {
+export function ButtonRow({ children, stacked = false }: { children: React.ReactNode; stacked?: boolean }) {
   return (
     <View
       style={{

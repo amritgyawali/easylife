@@ -283,7 +283,13 @@ export function ValuationSheet({
       title={`Update price — ${asset.name}`}
       subtitle="Prices are entered by hand; every derived value shows this date."
       onClose={onClose}
-      footer={<FormActions pending={recordValuation.isPending} onSave={() => void handleSave()} saveLabel="Save price" />}
+      footer={
+        <FormActions
+          pending={recordValuation.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Save price"
+        />
+      }
     >
       <MoneyField
         label="Price per unit"

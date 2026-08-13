@@ -172,10 +172,7 @@ export default function TransactionsScreen() {
       ) : (
         byDay.map(([date, transactions]) => (
           <View key={date} style={{ gap: spacing.sm }}>
-            <SectionHeader
-              title={relativeDayLabel(date, today)}
-              description={dayTotals(transactions)}
-            />
+            <SectionHeader title={relativeDayLabel(date, today)} description={dayTotals(transactions)} />
             <List>
               {transactions.map((transaction) => (
                 <TransactionListItem

@@ -78,8 +78,7 @@ export function IconButton({
             borderRadius: radius.md,
             borderWidth: variant === 'outline' ? 1 : 0,
             borderColor: hovered ? theme.colors.borderStrong : theme.colors.border,
-            backgroundColor:
-              pressed || hovered ? theme.colors.surfaceHover : restingBackground[variant],
+            backgroundColor: pressed || hovered ? theme.colors.surfaceHover : restingBackground[variant],
             opacity: disabled ? 0.45 : 1,
           },
           transition(),

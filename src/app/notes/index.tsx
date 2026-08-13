@@ -134,7 +134,10 @@ function NoteCard({
           {note.title || 'Untitled'}
         </ThemedText>
         {/* Claims the responder so pinning doesn't also open the note. */}
-        <View onStartShouldSetResponder={() => true} style={{ marginTop: -spacing.xs, marginRight: -spacing.sm }}>
+        <View
+          onStartShouldSetResponder={() => true}
+          style={{ marginTop: -spacing.xs, marginRight: -spacing.sm }}
+        >
           <IconButton
             icon={note.is_pinned ? 'bookmark' : 'bookmark-outline'}
             tone={note.is_pinned ? 'primary' : 'muted'}

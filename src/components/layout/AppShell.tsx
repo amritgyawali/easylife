@@ -426,11 +426,7 @@ function TabButton({ item, active, onPress }: { item: NavItem; active: boolean; 
           transition(),
         ]}
       >
-        <Ionicons
-          name={item.icon}
-          size={19}
-          color={active ? theme.colors.primary : theme.colors.textMuted}
-        />
+        <Ionicons name={item.icon} size={19} color={active ? theme.colors.primary : theme.colors.textMuted} />
       </View>
       <ThemedText
         variant="caption"

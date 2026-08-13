@@ -190,7 +190,13 @@ export function BottomSheet({
                 ) : null}
               </View>
               <View style={{ marginTop: -spacing.xs, marginRight: -spacing.sm }}>
-                <IconButton icon="close" accessibilityLabel="Close" onPress={onClose} tone="muted" size={22} />
+                <IconButton
+                  icon="close"
+                  accessibilityLabel="Close"
+                  onPress={onClose}
+                  tone="muted"
+                  size={22}
+                />
               </View>
             </View>
 

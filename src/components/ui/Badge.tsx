@@ -65,9 +65,7 @@ export function Badge({ label, tone = 'neutral', size = 'sm', icon, dot = false 
       }}
     >
       {dot ? (
-        <View
-          style={{ width: 6, height: 6, borderRadius: radius.full, backgroundColor: foreground[tone] }}
-        />
+        <View style={{ width: 6, height: 6, borderRadius: radius.full, backgroundColor: foreground[tone] }} />
       ) : null}
       {icon ? <Ionicons name={icon} size={size === 'md' ? 14 : 12} color={foreground[tone]} /> : null}
       <ThemedText variant="caption" tone={textTone[tone]} weight="semibold" numberOfLines={1}>

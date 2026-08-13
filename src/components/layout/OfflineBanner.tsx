@@ -66,12 +66,7 @@ export function OfflineBanner() {
       ) : (
         <ActivityIndicator size="small" color={accent} />
       )}
-      <ThemedText
-        variant="caption"
-        tone={offline ? 'warning' : 'primary'}
-        weight="medium"
-        numberOfLines={1}
-      >
+      <ThemedText variant="caption" tone={offline ? 'warning' : 'primary'} weight="medium" numberOfLines={1}>
         {message}
       </ThemedText>
     </View>

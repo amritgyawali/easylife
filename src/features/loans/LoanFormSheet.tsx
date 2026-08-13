@@ -112,7 +112,12 @@ export function LoanFormSheet({ visible, onClose, defaultCounterpartyId }: LoanF
         />
       }
     >
-      <OptionGroup variant="segmented" options={DIRECTION_OPTIONS} value={direction} onChange={setDirection} />
+      <OptionGroup
+        variant="segmented"
+        options={DIRECTION_OPTIONS}
+        value={direction}
+        onChange={setDirection}
+      />
 
       {personOptions.length === 0 ? (
         <InlineMessage

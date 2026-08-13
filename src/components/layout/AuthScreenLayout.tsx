@@ -16,11 +16,12 @@ export interface AuthScreenLayoutProps extends PropsWithChildren {
   subtitle?: string;
 }
 
-const HIGHLIGHTS: { icon: 'wallet-outline' | 'checkbox-outline' | 'cloud-offline-outline'; text: string }[] = [
-  { icon: 'wallet-outline', text: 'Every account, loan and investment in one ledger' },
-  { icon: 'checkbox-outline', text: 'Tasks, habits and notes beside the numbers' },
-  { icon: 'cloud-offline-outline', text: 'Works offline — changes sync when you reconnect' },
-];
+const HIGHLIGHTS: { icon: 'wallet-outline' | 'checkbox-outline' | 'cloud-offline-outline'; text: string }[] =
+  [
+    { icon: 'wallet-outline', text: 'Every account, loan and investment in one ledger' },
+    { icon: 'checkbox-outline', text: 'Tasks, habits and notes beside the numbers' },
+    { icon: 'cloud-offline-outline', text: 'Works offline — changes sync when you reconnect' },
+  ];
 
 /**
  * Sign-in / sign-up chrome.

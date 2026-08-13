@@ -44,9 +44,7 @@ export default function InvestmentsScreen() {
           eyebrow="Money"
           title="Investments"
           subtitle="Values come from prices you record — there is no market feed."
-          action={
-            <Button label="Add holding" size="sm" icon="add" onPress={() => setAssetSheetOpen(true)} />
-          }
+          action={<Button label="Add holding" size="sm" icon="add" onPress={() => setAssetSheetOpen(true)} />}
         />
       }
     >
@@ -100,88 +98,88 @@ export default function InvestmentsScreen() {
           <SectionHeader title="Holdings" count={portfolio.length} />
 
           <Grid minColumnWidth={340}>
-          {portfolio.map(({ asset, transactions }) => {
-            const valuation = valueAsset(asset, transactions);
+            {portfolio.map(({ asset, transactions }) => {
+              const valuation = valueAsset(asset, transactions);
 
-            return (
-              <Card key={asset.id} style={{ gap: spacing.md, height: '100%' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
-                  <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
-                    <ThemedText variant="subtitle" numberOfLines={1}>
-                      {asset.name}
-                    </ThemedText>
-                    <ThemedText variant="caption" tone="muted">
-                      {valuation.quantity} units
-                      {asset.institution ? ` · ${asset.institution}` : ''}
-                    </ThemedText>
-                  </View>
-                  <View style={{ alignItems: 'flex-end', gap: spacing.xxs }}>
-                    {valuation.currentValueMinor === null ? (
-                      <ThemedText variant="body" tone="muted">
-                        No price
+              return (
+                <Card key={asset.id} style={{ gap: spacing.md, height: '100%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+                    <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                      <ThemedText variant="subtitle" numberOfLines={1}>
+                        {asset.name}
                       </ThemedText>
-                    ) : (
-                      <ThemedText variant="subtitle" numeric>
-                        {formatMoney(valuation.currentValueMinor, asset.currency)}
+                      <ThemedText variant="caption" tone="muted">
+                        {valuation.quantity} units
+                        {asset.institution ? ` · ${asset.institution}` : ''}
                       </ThemedText>
-                    )}
-                    <ThemedText variant="caption" tone="subtle" numeric>
-                      {formatMoney(valuation.netInvestedMinor, asset.currency)} in
-                    </ThemedText>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: spacing.xxs }}>
+                      {valuation.currentValueMinor === null ? (
+                        <ThemedText variant="body" tone="muted">
+                          No price
+                        </ThemedText>
+                      ) : (
+                        <ThemedText variant="subtitle" numeric>
+                          {formatMoney(valuation.currentValueMinor, asset.currency)}
+                        </ThemedText>
+                      )}
+                      <ThemedText variant="caption" tone="subtle" numeric>
+                        {formatMoney(valuation.netInvestedMinor, asset.currency)} in
+                      </ThemedText>
+                    </View>
                   </View>
-                </View>
 
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                  <Badge label={asset.asset_type.replace(/_/g, ' ')} />
-                  {asset.symbol ? <Badge label={asset.symbol} /> : null}
-                  {valuation.unrealisedGainMinor !== null ? (
-                    <Badge
-                      label={`${valuation.unrealisedGainMinor >= 0 ? '+' : '-'}${formatMoney(
-                        Math.abs(valuation.unrealisedGainMinor),
-                        asset.currency,
-                        { showCurrency: false }
-                      )}${valuation.returnRate !== null ? ` (${Math.round(valuation.returnRate * 100)}%)` : ''}`}
-                      tone={valuation.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
-                    />
-                  ) : null}
-                  {valuation.realisedIncomeMinor > 0 ? (
-                    <Badge
-                      label={`${formatMoney(valuation.realisedIncomeMinor, asset.currency, {
-                        showCurrency: false,
-                      })} received`}
-                      tone="primary"
-                    />
-                  ) : null}
-                </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                    <Badge label={asset.asset_type.replace(/_/g, ' ')} />
+                    {asset.symbol ? <Badge label={asset.symbol} /> : null}
+                    {valuation.unrealisedGainMinor !== null ? (
+                      <Badge
+                        label={`${valuation.unrealisedGainMinor >= 0 ? '+' : '-'}${formatMoney(
+                          Math.abs(valuation.unrealisedGainMinor),
+                          asset.currency,
+                          { showCurrency: false }
+                        )}${valuation.returnRate !== null ? ` (${Math.round(valuation.returnRate * 100)}%)` : ''}`}
+                        tone={valuation.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
+                      />
+                    ) : null}
+                    {valuation.realisedIncomeMinor > 0 ? (
+                      <Badge
+                        label={`${formatMoney(valuation.realisedIncomeMinor, asset.currency, {
+                          showCurrency: false,
+                        })} received`}
+                        tone="primary"
+                      />
+                    ) : null}
+                  </View>
 
-                {/* Always state how old the price is — a stale valuation
+                  {/* Always state how old the price is — a stale valuation
                     presented as current is worse than none. */}
-                <ThemedText variant="caption" tone={valuation.asOf ? 'muted' : 'warning'}>
-                  {valuation.asOf
-                    ? `Priced as of ${formatIsoDate(valuation.asOf)}`
-                    : 'Record a price to see what this is worth.'}
-                </ThemedText>
+                  <ThemedText variant="caption" tone={valuation.asOf ? 'muted' : 'warning'}>
+                    {valuation.asOf
+                      ? `Priced as of ${formatIsoDate(valuation.asOf)}`
+                      : 'Record a price to see what this is worth.'}
+                  </ThemedText>
 
-                <View style={{ flex: 1 }} />
+                  <View style={{ flex: 1 }} />
 
-                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <Button
-                    label="Buy / sell"
-                    size="sm"
-                    variant="secondary"
-                    icon="swap-vertical-outline"
-                    onPress={() => setTransactionAsset(asset)}
-                  />
-                  <Button
-                    label="Update price"
-                    size="sm"
-                    variant="ghost"
-                    onPress={() => setValuationAsset(asset)}
-                  />
-                </View>
-              </Card>
-            );
-          })}
+                  <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                    <Button
+                      label="Buy / sell"
+                      size="sm"
+                      variant="secondary"
+                      icon="swap-vertical-outline"
+                      onPress={() => setTransactionAsset(asset)}
+                    />
+                    <Button
+                      label="Update price"
+                      size="sm"
+                      variant="ghost"
+                      onPress={() => setValuationAsset(asset)}
+                    />
+                  </View>
+                </Card>
+              );
+            })}
           </Grid>
         </>
       )}
@@ -200,4 +198,3 @@ export default function InvestmentsScreen() {
     </Screen>
   );
 }
-

@@ -87,13 +87,7 @@ export function QuickAddProvider({ children }: PropsWithChildren) {
               <Button label="Cancel" variant="secondary" onPress={close} fullWidth />
             </View>
             <View style={{ flex: 1 }}>
-              <Button
-                label="Add"
-                icon="checkmark"
-                onPress={submit}
-                disabled={!title.trim()}
-                fullWidth
-              />
+              <Button label="Add" icon="checkmark" onPress={submit} disabled={!title.trim()} fullWidth />
             </View>
           </>
         }

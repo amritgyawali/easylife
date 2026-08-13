@@ -100,29 +100,30 @@ export default function BudgetsScreen() {
         />
       ) : (
         <Grid minColumnWidth={380} maxColumns={2}>
-        {budgets.map(({ budget, itemProgress, totals }) => (
-          <BudgetCard
-            key={budget.id}
-            budget={budget}
-            itemProgress={itemProgress}
-            totals={totals}
-            categoryName={categoryName}
-            hasCategories={expenseCategories.length > 0}
-            onAddCategory={() => setItemSheet({ budget, item: null })}
-            onManageCategories={() => router.push('/finance/categories')}
-            onEditItem={(item) => setItemSheet({ budget, item })}
-            onDeleteItem={(item) =>
-              confirmAndRun(`Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`, () =>
-                deleteBudgetItem.mutate(item.id)
-              )
-            }
-            onDelete={() =>
-              confirmAndRun(`Delete the "${budget.name}" budget? Its transactions are not affected.`, () =>
-                deleteBudget.mutate(budget.id)
-              )
-            }
-          />
-        ))}
+          {budgets.map(({ budget, itemProgress, totals }) => (
+            <BudgetCard
+              key={budget.id}
+              budget={budget}
+              itemProgress={itemProgress}
+              totals={totals}
+              categoryName={categoryName}
+              hasCategories={expenseCategories.length > 0}
+              onAddCategory={() => setItemSheet({ budget, item: null })}
+              onManageCategories={() => router.push('/finance/categories')}
+              onEditItem={(item) => setItemSheet({ budget, item })}
+              onDeleteItem={(item) =>
+                confirmAndRun(
+                  `Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`,
+                  () => deleteBudgetItem.mutate(item.id)
+                )
+              }
+              onDelete={() =>
+                confirmAndRun(`Delete the "${budget.name}" budget? Its transactions are not affected.`, () =>
+                  deleteBudget.mutate(budget.id)
+                )
+              }
+            />
+          ))}
         </Grid>
       )}
 
@@ -132,8 +133,12 @@ export default function BudgetsScreen() {
         budget={itemSheet?.budget ?? null}
         item={itemSheet?.item ?? null}
         usedCategoryIds={
-          new Set((itemSheet ? budgets.find((row) => row.budget.id === itemSheet.budget.id) : undefined)
-            ?.itemProgress.map((entry) => entry.item.category_id) ?? [])
+          new Set(
+            (itemSheet
+              ? budgets.find((row) => row.budget.id === itemSheet.budget.id)
+              : undefined
+            )?.itemProgress.map((entry) => entry.item.category_id) ?? []
+          )
         }
         categories={expenseCategories}
         onClose={() => setItemSheet(null)}
@@ -224,13 +229,7 @@ function BudgetCard({
       <View style={{ flex: 1 }} />
 
       {hasCategories ? (
-        <Button
-          label="Add category"
-          variant="secondary"
-          size="sm"
-          icon="add"
-          onPress={onAddCategory}
-        />
+        <Button label="Add category" variant="secondary" size="sm" icon="add" onPress={onAddCategory} />
       ) : (
         <View style={{ gap: spacing.xs }}>
           <ThemedText variant="caption" tone="muted">
@@ -521,9 +520,7 @@ function BudgetItemFormSheet({
       title={item ? 'Edit category budget' : 'Add a category'}
       subtitle={budget.name}
       onClose={onClose}
-      footer={
-        <FormActions pending={saveBudgetItem.isPending} onSave={() => void handleSave()} />
-      }
+      footer={<FormActions pending={saveBudgetItem.isPending} onSave={() => void handleSave()} />}
     >
       {availableCategories.length === 0 ? (
         <InlineMessage tone="warning" message="Every expense category is already on this budget." />

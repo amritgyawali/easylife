@@ -114,13 +114,7 @@ export function FormActions({
         />
       ) : null}
       <View style={{ flex: 1 }}>
-        <Button
-          label={saveLabel}
-          loading={pending}
-          disabled={disabled}
-          fullWidth
-          onPress={onSave}
-        />
+        <Button label={saveLabel} loading={pending} disabled={disabled} fullWidth onPress={onSave} />
       </View>
     </>
   );

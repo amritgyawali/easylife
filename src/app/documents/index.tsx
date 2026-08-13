@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
@@ -14,6 +15,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { toUserMessage } from '@/utils/errors';
+import { formatFileSize } from '@/utils/bytes';
 import { formatIsoDate } from '@/utils/date';
 import {
   useDeleteDocument,
@@ -27,6 +29,7 @@ import { UploadSheet } from '@/features/documents/UploadSheet';
 
 /** The document vault: private storage, deduplicated by file hash. */
 export default function DocumentsScreen() {
+  const router = useRouter();
   const { data: documents, isLoading, error, refetch, isRefetching } = useDocuments();
   const deleteDocument = useDeleteDocument();
   const { pickDocument, pickPhoto } = useFilePicker();
@@ -74,7 +77,7 @@ export default function DocumentsScreen() {
         <>
           <ScreenHeader
             title="Documents"
-            subtitle="Stored privately. Identical files are recognised, never uploaded twice."
+            subtitle="Stored privately. Identical files are recognised, never uploaded twice. Open one in the Reader to read it without downloading it."
             action={<Button label="Add file" size="sm" onPress={() => void handlePick('file')} />}
           />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -122,14 +125,20 @@ export default function DocumentsScreen() {
                   {document.title}
                 </ThemedText>
                 <ThemedText variant="caption" tone="muted">
-                  {(document.file_size_bytes / 1024).toFixed(0)} KB
+                  {formatFileSize(document.file_size_bytes)}
                   {document.institution ? ` · ${document.institution}` : ''}
                   {document.document_date ? ` · ${formatIsoDate(document.document_date)}` : ''}
                 </ThemedText>
               </View>
               <IconButton
+                icon="reader-outline"
+                tone="primary"
+                accessibilityLabel={`Read ${document.title} in the app`}
+                onPress={() => router.push({ pathname: '/reader', params: { documentId: document.id } })}
+              />
+              <IconButton
                 icon="open-outline"
-                accessibilityLabel={`Open ${document.title}`}
+                accessibilityLabel={`Open ${document.title} outside the app`}
                 onPress={() => void openDocument(document)}
               />
               <IconButton

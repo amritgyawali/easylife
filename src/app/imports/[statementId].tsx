@@ -249,7 +249,7 @@ function ReviewRow({
   const pending = row.review_status === 'pending';
 
   return (
-    <Card style={{ gap: spacing.md, height: '100%' }}>
+    <Card style={{ gap: spacing.md, flexGrow: 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
         <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
           <ThemedText variant="body" weight="medium" numberOfLines={2}>

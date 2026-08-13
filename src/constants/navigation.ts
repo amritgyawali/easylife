@@ -105,5 +105,28 @@ export const SIDEBAR_ITEMS: NavItem[] = [
   ...UTILITY_ITEMS,
 ];
 
+const ALL_HREFS = [...SIDEBAR_ITEMS, ...MOBILE_TABS].map((item) => item.href);
+
+/**
+ * The destination the current path belongs to — the *longest* matching href,
+ * not merely the first prefix that matches.
+ *
+ * Prefix matching alone lit up two sidebar items at once: on
+ * `/finance/accounts`, both "Transactions" (`/finance`) and "Accounts"
+ * (`/finance/accounts`) claimed to be the current screen. Taking the longest
+ * match means the most specific destination wins, which is the one the user
+ * actually opened.
+ */
+export function activeNavHref(pathname: string): string | null {
+  let best: string | null = null;
+
+  for (const href of ALL_HREFS) {
+    const matches = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+    if (matches && (best === null || href.length > best.length)) best = href;
+  }
+
+  return best;
+}
+
 /** Breakpoint at which the shell switches from mobile tabs to the desktop sidebar. */
 export const DESKTOP_BREAKPOINT = 768;

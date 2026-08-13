@@ -209,7 +209,7 @@ function LoanCard({
     <Card
       onPress={onPress}
       accessibilityLabel={`Record on loan with ${personName}`}
-      style={{ gap: spacing.md, height: '100%' }}
+      style={{ gap: spacing.md, flexGrow: 1 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
         <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>

@@ -78,7 +78,7 @@ export default function ScanScreen() {
       }
     >
       <Grid minColumnWidth={340} maxColumns={2}>
-        <Card style={{ gap: spacing.md, height: '100%' }}>
+        <Card style={{ gap: spacing.md, flexGrow: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Ionicons name="scan-outline" size={22} color={theme.colors.primary} />
             <ThemedText variant="subtitle">Scan a statement</ThemedText>
@@ -91,7 +91,7 @@ export default function ScanScreen() {
           <Button label="Start a scan" icon="camera-outline" onPress={() => setWizardOpen(true)} />
         </Card>
 
-        <Card style={{ gap: spacing.md, height: '100%' }}>
+        <Card style={{ gap: spacing.md, flexGrow: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Ionicons name="folder-outline" size={22} color={theme.colors.primary} />
             <ThemedText variant="subtitle">File a document</ThemedText>

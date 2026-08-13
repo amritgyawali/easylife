@@ -159,7 +159,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Card style={{ gap: spacing.md, height: '100%' }}>
+    <Card style={{ gap: spacing.md, flexGrow: 1 }}>
       <View style={{ gap: spacing.xs }}>
         <ThemedText variant="subtitle">{title}</ThemedText>
         <ThemedText variant="label" tone="muted">

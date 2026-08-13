@@ -127,7 +127,7 @@ function NoteCard({
     <Card
       onPress={onOpen}
       accessibilityLabel={`Open note ${note.title}`}
-      style={{ gap: spacing.sm, height: '100%' }}
+      style={{ gap: spacing.sm, flexGrow: 1 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
         <ThemedText variant="subtitle" style={{ flex: 1 }} numberOfLines={2}>

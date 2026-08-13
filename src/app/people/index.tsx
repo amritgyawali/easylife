@@ -139,7 +139,7 @@ export default function PeopleScreen() {
             const positions = exposureByPerson.get(person.id) ?? [];
 
             return (
-              <Card key={person.id} style={{ gap: spacing.md, height: '100%' }}>
+              <Card key={person.id} style={{ gap: spacing.md, flexGrow: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
                     <ThemedText variant="subtitle" numberOfLines={1}>

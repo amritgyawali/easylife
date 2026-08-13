@@ -64,7 +64,7 @@ export default function InvestmentsScreen() {
         <>
           <Grid minColumnWidth={340} maxColumns={2}>
             {totals.map((total) => (
-              <Card key={total.currency} style={{ gap: spacing.md, height: '100%' }}>
+              <Card key={total.currency} style={{ gap: spacing.md, flexGrow: 1 }}>
                 <SectionHeader title={`Portfolio · ${total.currency}`} />
                 <StatRow>
                   <Stat
@@ -102,7 +102,7 @@ export default function InvestmentsScreen() {
               const valuation = valueAsset(asset, transactions);
 
               return (
-                <Card key={asset.id} style={{ gap: spacing.md, height: '100%' }}>
+                <Card key={asset.id} style={{ gap: spacing.md, flexGrow: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
                     <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
                       <ThemedText variant="subtitle" numberOfLines={1}>

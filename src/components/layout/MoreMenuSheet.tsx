@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
 import { minTouchTarget, radius, spacing } from '@/constants/theme';
-import { MORE_MENU_SECTIONS } from '@/constants/navigation';
+import { activeNavHref, MORE_MENU_SECTIONS } from '@/constants/navigation';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
@@ -12,11 +12,6 @@ import { clickable, focusRing, pressState, transition } from '@/utils/interactio
 export interface MoreMenuSheetProps {
   visible: boolean;
   onClose: () => void;
-}
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 /**
@@ -35,6 +30,7 @@ export function MoreMenuSheet({ visible, onClose }: MoreMenuSheetProps) {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const current = activeNavHref(pathname);
 
   return (
     <BottomSheet visible={visible} title="Everything else" onClose={onClose} body="flush">
@@ -49,7 +45,7 @@ export function MoreMenuSheet({ visible, onClose }: MoreMenuSheetProps) {
           </ThemedText>
 
           {section.items.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = item.href === current;
             return (
               <Pressable
                 key={item.href}

@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { useLayout } from '@/hooks/useCompactLayout';
 import { radius, spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { Grid } from '@/components/layout/Grid';
@@ -18,7 +17,6 @@ import { SkeletonCard, SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { useToday } from '@/hooks/useToday';
-import { useQuickCapture } from '@/components/layout/QuickAddButton';
 import { useProfile } from '@/features/auth/useProfile';
 import { formatIsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
@@ -46,10 +44,8 @@ import { GoalsSummaryCard } from '@/features/dashboard/GoalsSummaryCard';
  */
 export function DashboardScreen() {
   const router = useRouter();
-  const { compact } = useLayout();
   const { today } = useToday();
   const { data: profile } = useProfile();
-  const { open: openQuickAdd } = useQuickCapture();
 
   const tasksQuery = useTasks();
   const habitsQuery = useHabits();
@@ -114,19 +110,9 @@ export function DashboardScreen() {
         <ScreenHeader
           title={firstName ? `Hello, ${firstName}` : 'Dashboard'}
           subtitle={formatIsoDate(today)}
-          action={
-            compact ? (
-              <Button label="Quick add" size="sm" icon="add" onPress={openQuickAdd} />
-            ) : (
-              <Button
-                label="Search"
-                size="sm"
-                variant="secondary"
-                icon="search"
-                onPress={() => router.push('/search')}
-              />
-            )
-          }
+          // No header action: quick capture is the floating button on a phone
+          // and the top bar's "New" on desktop, and search has its own home in
+          // both. A third entry point here would just be a duplicate.
         />
       }
     >
@@ -137,16 +123,29 @@ export function DashboardScreen() {
         </>
       ) : (
         <>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {/* Fixed-width cells rather than flex-grow: with five shortcuts the
+              second row would otherwise stretch its two tiles to double width. */}
+          <Grid minColumnWidth={104} maxColumns={5} gap={spacing.sm}>
             <QuickAction icon="add-circle-outline" label="Task" onPress={() => router.push('/tasks')} />
             <QuickAction icon="cash-outline" label="Spend" onPress={() => router.push('/finance')} />
             <QuickAction icon="document-text-outline" label="Note" onPress={() => router.push('/notes')} />
             <QuickAction icon="repeat-outline" label="Habits" onPress={() => router.push('/habits')} />
             <QuickAction icon="scan-outline" label="Scan" onPress={() => router.push('/scan')} />
-          </View>
+          </Grid>
 
           <Grid minColumnWidth={320} maxColumns={2}>
-            <NetWorthCard />
+            <NetWorthCard
+              action={
+                <Button
+                  label="Accounts"
+                  size="sm"
+                  variant="ghost"
+                  icon="arrow-forward"
+                  iconPosition="trailing"
+                  onPress={() => router.push('/finance/accounts')}
+                />
+              }
+            />
 
             <Card style={{ gap: spacing.md }}>
               <SectionHeader
@@ -249,13 +248,6 @@ export function DashboardScreen() {
               </List>
             </View>
           ) : null}
-
-          <Button
-            label="Accounts"
-            variant="secondary"
-            icon="card-outline"
-            onPress={() => router.push('/finance/accounts')}
-          />
         </>
       )}
     </Screen>
@@ -286,9 +278,6 @@ function QuickAction({
         const { pressed, hovered, focused } = pressState(state);
         return [
           {
-            flexGrow: 1,
-            flexBasis: 92,
-            maxWidth: 200,
             alignItems: 'center' as const,
             gap: spacing.xs,
             paddingVertical: spacing.md,

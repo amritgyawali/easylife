@@ -77,7 +77,7 @@ export default function ImportsScreen() {
       ) : (
         <Grid minColumnWidth={320}>
           {sorted.map((statement) => (
-            <Card key={statement.id} style={{ gap: spacing.md, height: '100%' }}>
+            <Card key={statement.id} style={{ gap: spacing.md, flexGrow: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
                 <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
                   <ThemedText variant="subtitle" numberOfLines={1}>

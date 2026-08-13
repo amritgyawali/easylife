@@ -146,7 +146,7 @@ function AccountCard({
     <Card
       onPress={onPress}
       accessibilityLabel={`Edit ${account.name}`}
-      style={{ gap: spacing.md, height: '100%' }}
+      style={{ gap: spacing.md, flexGrow: 1 }}
     >
       <View style={{ gap: spacing.xxs }}>
         <ThemedText variant="label" tone="muted" numberOfLines={1}>

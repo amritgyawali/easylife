@@ -10,6 +10,7 @@ import { useThemeStore } from '@/stores/theme-store';
 import { useUiStore } from '@/stores/ui-store';
 import { layout, minTouchTarget, radius, spacing } from '@/constants/theme';
 import {
+  activeNavHref,
   MOBILE_TABS,
   MORE_MENU_ITEMS,
   NAV_SECTIONS,
@@ -24,11 +25,6 @@ import { MoreMenuSheet } from '@/components/layout/MoreMenuSheet';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 /**
  * Adaptive shell: a persistent left sidebar plus a top bar on desktop/wide web
@@ -79,6 +75,7 @@ function DesktopShell({ children }: PropsWithChildren) {
 function Sidebar({ collapsed, canToggle }: { collapsed: boolean; canToggle: boolean }) {
   const theme = useTheme();
   const pathname = usePathname();
+  const current = activeNavHref(pathname);
   const router = useRouter();
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
 
@@ -154,7 +151,7 @@ function Sidebar({ collapsed, canToggle }: { collapsed: boolean; canToggle: bool
                 key={item.href}
                 item={item}
                 collapsed={collapsed}
-                active={isActive(pathname, item.href)}
+                active={item.href === current}
                 onPress={() => router.push(item.href)}
               />
             ))}
@@ -175,7 +172,7 @@ function Sidebar({ collapsed, canToggle }: { collapsed: boolean; canToggle: bool
             key={item.href}
             item={item}
             collapsed={collapsed}
-            active={isActive(pathname, item.href)}
+            active={item.href === current}
             onPress={() => router.push(item.href)}
           />
         ))}
@@ -341,10 +338,11 @@ function MobileShell({ children }: PropsWithChildren) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [moreOpen, setMoreOpen] = useState(false);
+  const current = activeNavHref(pathname);
 
   // "More" is active whenever the current route is one of the overflow
   // screens, so the tab still reflects where you are after the sheet closes.
-  const inMoreSection = MORE_MENU_ITEMS.some((item) => isActive(pathname, item.href));
+  const inMoreSection = MORE_MENU_ITEMS.some((item) => item.href === current);
 
   return (
     <View style={{ flex: 1 }}>
@@ -367,7 +365,7 @@ function MobileShell({ children }: PropsWithChildren) {
           <TabButton
             key={item.href}
             item={item}
-            active={isActive(pathname, item.href)}
+            active={item.href === current}
             onPress={() => router.push(item.href)}
           />
         ))}

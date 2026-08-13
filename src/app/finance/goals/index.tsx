@@ -105,7 +105,7 @@ function GoalCard({
   const percent = Math.round(progress * 100);
 
   return (
-    <Card style={{ gap: spacing.md, height: '100%' }}>
+    <Card style={{ gap: spacing.md, flexGrow: 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
         <View style={{ flex: 1, gap: spacing.xxs }}>
           <ThemedText variant="subtitle" numberOfLines={2}>

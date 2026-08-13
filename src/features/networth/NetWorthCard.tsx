@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,6 +16,8 @@ import { useNetWorth } from '@/features/networth/use-net-worth';
 export interface NetWorthCardProps {
   /** Hides the per-component breakdown on compact surfaces like the dashboard. */
   compact?: boolean;
+  /** Right-aligned control in the card header, e.g. a link to Accounts. */
+  action?: ReactNode;
 }
 
 /**
@@ -25,7 +28,7 @@ export interface NetWorthCardProps {
  * price. A single confident number built on missing data would be worse than
  * a smaller number that says what it excludes.
  */
-export function NetWorthCard({ compact = false }: NetWorthCardProps) {
+export function NetWorthCard({ compact = false, action }: NetWorthCardProps) {
   const theme = useTheme();
   const { breakdown, converted, targetCurrency, isLoading } = useNetWorth();
 
@@ -47,7 +50,7 @@ export function NetWorthCard({ compact = false }: NetWorthCardProps) {
 
   return (
     <Card style={{ gap: spacing.md }}>
-      <SectionHeader title="Net worth" />
+      <SectionHeader title="Net worth" action={action} />
 
       {!hasAnything ? (
         <ThemedText variant="body" tone="muted">

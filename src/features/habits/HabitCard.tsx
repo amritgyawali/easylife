@@ -60,7 +60,7 @@ export function HabitCard({ habit, entries, today, onCheckIn, onEdit }: HabitCar
   const strip = Array.from({ length: STRIP_DAYS }, (_, index) => addDays(today, index - (STRIP_DAYS - 1)));
 
   return (
-    <Card style={{ gap: spacing.md, height: '100%' }}>
+    <Card style={{ gap: spacing.md, flexGrow: 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
         <View style={{ marginLeft: -spacing.md, marginTop: -spacing.sm }}>
           <Checkbox

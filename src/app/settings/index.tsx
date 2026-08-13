@@ -18,6 +18,7 @@ import { TextField } from '@/components/forms/TextField';
 import { minTouchTarget, spacing } from '@/constants/theme';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useTheme } from '@/hooks/useTheme';
+import { useLayout } from '@/hooks/useCompactLayout';
 import { useThemeStore, type ThemePreference } from '@/stores/theme-store';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdatePreferences, useUpdateProfile } from '@/features/auth/useProfile';
@@ -179,13 +180,15 @@ export default function SettingsScreen() {
             placeholder="Your name"
             autoComplete="name"
           />
-          <Button
-            label="Save name"
-            onPress={saveName}
-            loading={isSavingName}
-            variant="secondary"
-            icon="checkmark"
-          />
+          <ActionRow>
+            <Button
+              label="Save name"
+              onPress={saveName}
+              loading={isSavingName}
+              variant="secondary"
+              icon="checkmark"
+            />
+          </ActionRow>
         </Section>
 
         <Section title="Appearance">
@@ -267,7 +270,9 @@ export default function SettingsScreen() {
                   maxLength={8}
                   placeholder="4 digits or more"
                 />
-                <Button label="Set PIN" onPress={handleSetPin} loading={isSettingPin} variant="secondary" />
+                <ActionRow>
+                  <Button label="Set PIN" onPress={handleSetPin} loading={isSettingPin} variant="secondary" />
+                </ActionRow>
               </View>
             ) : null}
             <ThemedText variant="caption" tone="muted">
@@ -297,13 +302,15 @@ export default function SettingsScreen() {
         </View>
 
         <Section title="Account">
-          <Button
-            label="Sign out"
-            variant="secondary"
-            icon="log-out-outline"
-            onPress={handleSignOut}
-            loading={isSigningOut}
-          />
+          <ActionRow>
+            <Button
+              label="Sign out"
+              variant="secondary"
+              icon="log-out-outline"
+              onPress={handleSignOut}
+              loading={isSigningOut}
+            />
+          </ActionRow>
           <ThemedText variant="caption" tone="muted">
             Signed in as {user?.email ?? 'this device'}.
           </ThemedText>
@@ -316,23 +323,39 @@ export default function SettingsScreen() {
           <ThemedText variant="body" tone="muted">
             Deleting your account permanently removes all your data. This cannot be undone.
           </ThemedText>
-          <Button
-            label="Delete my account"
-            variant="danger"
-            icon="trash-outline"
-            onPress={confirmDeleteAccount}
-          />
+          <ActionRow>
+            <Button
+              label="Delete my account"
+              variant="danger"
+              icon="trash-outline"
+              onPress={confirmDeleteAccount}
+            />
+          </ActionRow>
         </Card>
       </View>
     </Screen>
   );
 }
 
+/**
+ * Keeps a settings button at its natural width on a wide screen — a card that
+ * stretches every button edge to edge reads as a row of banners — while a
+ * phone still gets the full-width tap target it wants.
+ */
+function ActionRow({ children }: { children: ReactNode }) {
+  const { compact } = useLayout();
+  if (compact) return <View>{children}</View>;
+  return <View style={{ flexDirection: 'row' }}>{children}</View>;
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ gap: spacing.sm, height: '100%' }}>
+    <View style={{ gap: spacing.sm, flexGrow: 1 }}>
       <SectionHeader title={title} />
-      <Card style={{ gap: spacing.md, flex: 1 }}>{children}</Card>
+      {/* `flexGrow` rather than a percentage height: inside a Grid cell the
+          card fills the row's height, but in the single-column phone layout it
+          stays exactly as tall as its content. */}
+      <Card style={{ gap: spacing.md, flexGrow: 1 }}>{children}</Card>
     </View>
   );
 }

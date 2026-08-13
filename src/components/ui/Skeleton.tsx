@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, View, type DimensionValue } from 'react-native';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View, type DimensionValue } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { radius } from '@/constants/theme';
+import { radius, spacing } from '@/constants/theme';
+import { Card } from '@/components/ui/Card';
 
 export interface SkeletonProps {
   width?: DimensionValue;
@@ -56,17 +56,47 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = radius.sm
   );
 }
 
+/**
+ * Loading placeholder shaped like the list it replaces — a leading square, two
+ * lines of text, a trailing value. Matching the real layout keeps the page
+ * from jumping when the data lands, which a row of plain grey bars does not.
+ */
 export function SkeletonList({ rows = 4 }: { rows?: number }) {
   return (
-    <View style={styles.list}>
+    <Card padded={false} accessibilityLabel="Loading">
       {Array.from({ length: rows }).map((_, index) => (
-        <Skeleton key={index} height={56} />
+        <View key={index} style={styles.row}>
+          <Skeleton width={36} height={36} borderRadius={radius.sm} />
+          <View style={styles.rowText}>
+            <Skeleton width={`${55 + ((index * 13) % 30)}%`} height={13} />
+            <Skeleton width={`${30 + ((index * 17) % 25)}%`} height={11} />
+          </View>
+          <Skeleton width={56} height={13} />
+        </View>
       ))}
-    </View>
+    </Card>
+  );
+}
+
+/** Placeholder for a summary card: a heading, a big number, a supporting line. */
+export function SkeletonCard() {
+  return (
+    <Card style={{ gap: spacing.md }} accessibilityLabel="Loading">
+      <Skeleton width="35%" height={11} />
+      <Skeleton width="60%" height={26} />
+      <Skeleton width="45%" height={12} />
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   base: { overflow: 'hidden' },
-  list: { gap: 12 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  rowText: { flex: 1, gap: spacing.sm },
 });

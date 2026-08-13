@@ -1,9 +1,13 @@
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
+import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { Divider } from '@/components/ui/Divider';
 import { formatIsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import { useNetWorth } from '@/features/networth/use-net-worth';
@@ -22,24 +26,28 @@ export interface NetWorthCardProps {
  * a smaller number that says what it excludes.
  */
 export function NetWorthCard({ compact = false }: NetWorthCardProps) {
+  const theme = useTheme();
   const { breakdown, converted, targetCurrency, isLoading } = useNetWorth();
 
-  if (isLoading) {
-    return (
-      <Card style={{ gap: spacing.sm }}>
-        <Skeleton height={14} width="40%" />
-        <Skeleton height={30} width="60%" />
-      </Card>
-    );
-  }
+  if (isLoading) return <SkeletonCard />;
 
   const hasAnything = breakdown.totalsByCurrency.size > 0;
+  const negative = converted.totalMinor < 0;
+
+  const caveats = [
+    converted.unconvertible.length > 0
+      ? `Excludes ${converted.unconvertible.join(', ')} — no exchange rate recorded.`
+      : null,
+    converted.unvaluedAssetCount > 0
+      ? `Excludes ${converted.unvaluedAssetCount} holding${
+          converted.unvaluedAssetCount === 1 ? '' : 's'
+        } with no price recorded.`
+      : null,
+  ].filter((caveat): caveat is string => caveat !== null);
 
   return (
     <Card style={{ gap: spacing.md }}>
-      <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-        NET WORTH
-      </ThemedText>
+      <SectionHeader title="Net worth" />
 
       {!hasAnything ? (
         <ThemedText variant="body" tone="muted">
@@ -47,31 +55,34 @@ export function NetWorthCard({ compact = false }: NetWorthCardProps) {
         </ThemedText>
       ) : (
         <>
-          <ThemedText variant="title" tone={converted.totalMinor < 0 ? 'negative' : 'default'}>
-            {formatMoney(converted.totalMinor, targetCurrency)}
-          </ThemedText>
-
-          {converted.unconvertible.length > 0 ? (
-            <ThemedText variant="caption" tone="warning">
-              Excludes {converted.unconvertible.join(', ')} — no exchange rate recorded.
+          <View style={{ gap: spacing.xxs }}>
+            <ThemedText variant="display" tone={negative ? 'negative' : 'default'} numeric>
+              {formatMoney(converted.totalMinor, targetCurrency)}
             </ThemedText>
-          ) : null}
+            {converted.oldestRateDate ? (
+              <ThemedText variant="caption" tone="subtle">
+                Converted using rates from {formatIsoDate(converted.oldestRateDate)}
+              </ThemedText>
+            ) : null}
+          </View>
 
-          {converted.oldestRateDate ? (
-            <ThemedText variant="caption" tone="muted">
-              Converted using rates from {formatIsoDate(converted.oldestRateDate)}.
-            </ThemedText>
-          ) : null}
-
-          {converted.unvaluedAssetCount > 0 ? (
-            <ThemedText variant="caption" tone="warning">
-              Excludes {converted.unvaluedAssetCount} holding
-              {converted.unvaluedAssetCount === 1 ? '' : 's'} with no price recorded.
-            </ThemedText>
-          ) : null}
+          {caveats.map((caveat) => (
+            <View key={caveat} style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start' }}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={14}
+                color={theme.colors.warning}
+                style={{ marginTop: 2 }}
+              />
+              <ThemedText variant="caption" tone="warning" style={{ flex: 1 }}>
+                {caveat}
+              </ThemedText>
+            </View>
+          ))}
 
           {!compact ? (
-            <View style={{ gap: spacing.xs }}>
+            <View style={{ gap: spacing.sm }}>
+              <Divider />
               {breakdown.components
                 .filter((component) => component.totalsByCurrency.size > 0)
                 .map((component) => (
@@ -79,10 +90,10 @@ export function NetWorthCard({ compact = false }: NetWorthCardProps) {
                     key={component.label}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
                   >
-                    <ThemedText variant="caption" tone="muted" style={{ flex: 1 }}>
+                    <ThemedText variant="label" tone="muted" style={{ flex: 1 }}>
                       {component.label}
                     </ThemedText>
-                    <ThemedText variant="caption">
+                    <ThemedText variant="label" weight="medium" numeric>
                       {[...component.totalsByCurrency.entries()]
                         .map(([currency, total]) => formatMoney(total, currency))
                         .join(' · ')}

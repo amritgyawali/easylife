@@ -4,15 +4,16 @@ import { View } from 'react-native';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { useToday } from '@/hooks/useToday';
+import { useLayout } from '@/hooks/useCompactLayout';
 import { useTasks, useToggleTaskComplete, type TaskRow } from '@/features/tasks/api';
 import { groupTasks, isOpen } from '@/features/tasks/grouping';
 import { TaskListItem } from '@/features/tasks/TaskListItem';
@@ -26,6 +27,7 @@ type Filter = 'open' | 'done';
  */
 export default function TasksScreen() {
   const { today } = useToday();
+  const { compact } = useLayout();
   const { data: tasks, isLoading, error, refetch, isRefetching } = useTasks();
   const toggleComplete = useToggleTaskComplete();
 
@@ -55,6 +57,8 @@ export default function TasksScreen() {
     [matching]
   );
 
+  const openCount = useMemo(() => matching.filter(isOpen).length, [matching]);
+
   function openSheet(task: TaskRow | null) {
     setEditing(task);
     setSheetOpen(true);
@@ -68,18 +72,29 @@ export default function TasksScreen() {
         <>
           <ScreenHeader
             title="Planner"
-            subtitle="Everything on your plate, grouped by when it's due."
-            action={<Button label="Add task" size="sm" onPress={() => openSheet(null)} />}
+            subtitle={
+              openCount > 0 ? `${openCount} open ${openCount === 1 ? 'task' : 'tasks'}` : 'Nothing open'
+            }
+            action={<Button label="Add task" size="sm" icon="add" onPress={() => openSheet(null)} />}
           />
-          <SearchInput value={query} onChangeText={setQuery} placeholder="Search tasks" />
-          <OptionGroup
-            options={[
-              { value: 'open', label: 'To do' },
-              { value: 'done', label: 'Completed' },
-            ]}
-            value={filter}
-            onChange={setFilter}
-          />
+          {/* Filters share one row on desktop; a phone gets them stacked so
+              neither the search box nor the toggle is squeezed to nothing. */}
+          <View style={{ flexDirection: compact ? 'column' : 'row', gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <SearchInput value={query} onChangeText={setQuery} placeholder="Search tasks" />
+            </View>
+            <View style={{ width: compact ? undefined : 240 }}>
+              <OptionGroup
+                variant="segmented"
+                options={[
+                  { value: 'open', label: 'To do' },
+                  { value: 'done', label: 'Completed' },
+                ]}
+                value={filter}
+                onChange={setFilter}
+              />
+            </View>
+          </View>
         </>
       }
     >
@@ -89,9 +104,13 @@ export default function TasksScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : filter === 'done' ? (
         completed.length === 0 ? (
-          <EmptyState title="Nothing completed yet" description="Finished tasks will collect here." />
+          <EmptyState
+            icon="checkmark-done-outline"
+            title="Nothing completed yet"
+            description="Finished tasks will collect here."
+          />
         ) : (
-          <Card padded={false}>
+          <List>
             {completed.map((task) => (
               <TaskListItem
                 key={task.id}
@@ -101,10 +120,11 @@ export default function TasksScreen() {
                 onPress={() => openSheet(task)}
               />
             ))}
-          </Card>
+          </List>
         )
       ) : sections.length === 0 ? (
         <EmptyState
+          icon="checkbox-outline"
           title={query ? 'No matching tasks' : 'Your list is clear'}
           description={query ? 'Try a different search.' : 'Add the first thing you need to get done.'}
           actionLabel={query ? undefined : 'Add task'}
@@ -113,10 +133,8 @@ export default function TasksScreen() {
       ) : (
         sections.map((section) => (
           <View key={section.bucket} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {section.title.toUpperCase()} · {section.tasks.length}
-            </ThemedText>
-            <Card padded={false}>
+            <SectionHeader title={section.title} count={section.tasks.length} />
+            <List>
               {section.tasks.map((task) => (
                 <TaskListItem
                   key={task.id}
@@ -126,7 +144,7 @@ export default function TasksScreen() {
                   onPress={() => openSheet(task)}
                 />
               ))}
-            </Card>
+            </List>
           </View>
         ))
       )}

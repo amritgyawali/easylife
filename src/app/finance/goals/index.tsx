@@ -1,27 +1,28 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { useTheme } from '@/hooks/useTheme';
-import { radius, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Checkbox } from '@/components/ui/Checkbox';
+import { CheckboxField } from '@/components/forms/CheckboxField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import { formatIsoDate, type IsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import type { GoalEventType } from '@/types/database';
@@ -44,11 +45,13 @@ export default function GoalsScreen() {
     <Screen
       onRefresh={refetch}
       refreshing={isRefetching}
+      width="wide"
       header={
         <ScreenHeader
+          eyebrow="Money"
           title="Savings goals"
           subtitle="Progress is the sum of what you've put in, less what you've taken out."
-          action={<Button label="New goal" size="sm" onPress={() => setFormOpen(true)} />}
+          action={<Button label="New goal" size="sm" icon="add" onPress={() => setFormOpen(true)} />}
         />
       }
     >
@@ -58,22 +61,25 @@ export default function GoalsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : goals.length === 0 ? (
         <EmptyState
+          icon="flag-outline"
           title="No goals yet"
           description="Set something aside for — an emergency fund, a trip, a deposit."
           actionLabel="New goal"
           onAction={() => setFormOpen(true)}
         />
       ) : (
-        goals.map(({ goal, savedMinor, progress }) => (
-          <GoalCard
-            key={goal.id}
-            goal={goal}
-            savedMinor={savedMinor}
-            progress={progress}
-            onRecord={() => setEventGoal(goal)}
-            onArchive={() => archiveGoal.mutate(goal.id)}
-          />
-        ))
+        <Grid minColumnWidth={340} maxColumns={2}>
+          {goals.map(({ goal, savedMinor, progress }) => (
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              savedMinor={savedMinor}
+              progress={progress}
+              onRecord={() => setEventGoal(goal)}
+              onArchive={() => archiveGoal.mutate(goal.id)}
+            />
+          ))}
+        </Grid>
       )}
 
       <GoalFormSheet visible={formOpen} onClose={() => setFormOpen(false)} />
@@ -95,39 +101,33 @@ function GoalCard({
   onRecord: () => void;
   onArchive: () => void;
 }) {
-  const theme = useTheme();
   const remaining = Math.max(0, goal.target_amount_minor - savedMinor);
   const percent = Math.round(progress * 100);
 
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card style={{ gap: spacing.md, height: '100%' }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
         <View style={{ flex: 1, gap: spacing.xxs }}>
-          <ThemedText variant="subtitle">{goal.name}</ThemedText>
-          <ThemedText variant="caption" tone="muted">
+          <ThemedText variant="subtitle" numberOfLines={2}>
+            {goal.name}
+          </ThemedText>
+          <ThemedText variant="caption" tone="muted" numeric>
             {formatMoney(savedMinor, goal.currency)} of {formatMoney(goal.target_amount_minor, goal.currency)}
           </ThemedText>
         </View>
-        <ThemedText variant="title" tone={percent >= 100 ? 'positive' : 'default'}>
+        <ThemedText variant="title" tone={percent >= 100 ? 'positive' : 'default'} numeric>
           {percent}%
         </ThemedText>
         <IconButton icon="archive-outline" accessibilityLabel={`Archive ${goal.name}`} onPress={onArchive} />
       </View>
 
-      <View
-        accessible
+      <ProgressBar
+        value={progress}
+        tone={percent >= 100 ? 'positive' : 'primary'}
         accessibilityLabel={`${goal.name}: ${percent} percent saved`}
-        style={{ height: 8, borderRadius: radius.full, backgroundColor: theme.colors.surfaceAlt }}
-      >
-        <View
-          style={{
-            height: 8,
-            width: `${Math.max(percent, 1)}%`,
-            borderRadius: radius.full,
-            backgroundColor: percent >= 100 ? theme.colors.positive : theme.colors.primary,
-          }}
-        />
-      </View>
+      />
+
+      <View style={{ flex: 1 }} />
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
         {goal.is_emergency_fund ? <Badge label="Emergency fund" tone="warning" /> : null}
@@ -137,7 +137,7 @@ function GoalCard({
           tone={remaining === 0 ? 'positive' : 'neutral'}
         />
         <View style={{ flex: 1 }} />
-        <Button label="Add money" size="sm" variant="ghost" onPress={onRecord} />
+        <Button label="Add money" size="sm" variant="secondary" icon="add" onPress={onRecord} />
       </View>
     </Card>
   );
@@ -182,11 +182,10 @@ function GoalFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
     <FormSheet
       visible={visible}
       title="New savings goal"
+      subtitle="Something to put money aside for."
       onClose={onClose}
       footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={createGoal.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
+        <FormActions pending={createGoal.isPending} onSave={() => void handleSave()} saveLabel="Create goal" />
       }
     >
       <TextField
@@ -197,41 +196,40 @@ function GoalFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
           setErrors((current) => ({ ...current, name: undefined }));
         }}
         error={errors.name}
+        required
         placeholder="e.g. Emergency fund"
         autoFocus
+        size="lg"
       />
-      <MoneyField
-        label="Target"
-        value={targetAmount}
-        onChangeText={(value) => {
-          setTargetAmount(value);
-          setErrors((current) => ({ ...current, amount: undefined }));
-        }}
-        currency={currency}
-        error={errors.amount}
-      />
-      <OptionGroup
-        label="Currency"
-        options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        value={currency}
-        onChange={setCurrency}
-      />
+      <FormRow>
+        <MoneyField
+          label="Target"
+          required
+          value={targetAmount}
+          onChangeText={(value) => {
+            setTargetAmount(value);
+            setErrors((current) => ({ ...current, amount: undefined }));
+          }}
+          currency={currency}
+          error={errors.amount}
+        />
+        <OptionGroup
+          label="Currency"
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          value={currency}
+          onChange={setCurrency}
+        />
+      </FormRow>
       <DateField label="Target date" value={targetDate} onChange={setTargetDate} today={today} />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Checkbox
-          checked={isEmergencyFund}
-          onChange={setIsEmergencyFund}
-          accessibilityLabel="This is my emergency fund"
-        />
-        <ThemedText variant="body">This is my emergency fund</ThemedText>
-      </View>
+      <CheckboxField
+        checked={isEmergencyFund}
+        onChange={setIsEmergencyFund}
+        label="This is my emergency fund"
+        description="Highlighted separately so you can see your safety net at a glance."
+      />
 
-      {createGoal.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(createGoal.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={createGoal.error} />
     </FormSheet>
   );
 }
@@ -286,17 +284,17 @@ function GoalEventSheet({
     <FormSheet
       visible={visible}
       title={goal.name}
+      subtitle="Record money moving in or out of this goal."
       onClose={onClose}
       footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={recordEvent.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
+        <FormActions pending={recordEvent.isPending} onSave={() => void handleSave()} />
       }
     >
       <OptionGroup
+        variant="segmented"
         options={[
-          { value: 'contribution', label: 'Put in' },
-          { value: 'withdrawal', label: 'Take out' },
+          { value: 'contribution', label: 'Put in', icon: 'arrow-down' },
+          { value: 'withdrawal', label: 'Take out', icon: 'arrow-up' },
         ]}
         value={eventType}
         onChange={setEventType}
@@ -320,11 +318,7 @@ function GoalEventSheet({
         clearable={false}
       />
 
-      {recordEvent.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(recordEvent.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={recordEvent.error} />
     </FormSheet>
   );
 }

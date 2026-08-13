@@ -1,10 +1,12 @@
 import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/theme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
+import { minTouchTarget, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { formatTime, isOverdue, relativeDayLabel, type IsoDate } from '@/utils/date';
 import type { TaskPriority } from '@/types/database';
 import type { TaskRow } from '@/features/tasks/api';
@@ -27,27 +29,25 @@ const PRIORITY_TONE: Record<TaskPriority, BadgeTone> = {
   none: 'neutral',
 };
 
+/**
+ * One task in a list. The checkbox is its own tap target, separate from the
+ * row's — completing a task and opening it to edit are different intentions,
+ * and on a phone they were previously a few pixels apart.
+ */
 export function TaskListItem({ task, today, onToggle, onPress, hideDueDate = false }: TaskListItemProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
   const completed = task.status === 'completed';
   const overdue = !completed && isOverdue(task.due_date, today);
   const dueTime = formatTime(task.due_time);
 
-  return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? `Edit ${task.title}` : undefined}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: spacing.md,
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.xs,
-        backgroundColor: pressed ? theme.colors.surfaceAlt : 'transparent',
-      })}
-    >
-      <View style={{ paddingTop: spacing.xxs }}>
+  const gutter = compact ? spacing.sm : spacing.md;
+
+  const content = (
+    <>
+      {/* Claims the touch responder so ticking the box doesn't also fire the
+          row's press and open the edit sheet on top of the completed task. */}
+      <View onStartShouldSetResponder={() => true}>
         <Checkbox
           checked={completed}
           onChange={onToggle}
@@ -55,9 +55,10 @@ export function TaskListItem({ task, today, onToggle, onPress, hideDueDate = fal
         />
       </View>
 
-      <View style={{ flex: 1, gap: spacing.xs }}>
+      <View style={{ flex: 1, gap: spacing.xs, paddingVertical: spacing.md, minWidth: 0 }}>
         <ThemedText
           variant="body"
+          weight={completed ? 'regular' : 'medium'}
           tone={completed ? 'muted' : 'default'}
           style={completed ? { textDecorationLine: 'line-through' } : undefined}
         >
@@ -65,26 +66,63 @@ export function TaskListItem({ task, today, onToggle, onPress, hideDueDate = fal
         </ThemedText>
 
         {task.description ? (
-          <ThemedText variant="caption" tone="muted" numberOfLines={2}>
+          <ThemedText variant="label" tone="muted" numberOfLines={2}>
             {task.description}
           </ThemedText>
         ) : null}
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-          {task.priority !== 'none' ? (
-            <Badge label={task.priority} tone={PRIORITY_TONE[task.priority]} />
-          ) : null}
-          {!hideDueDate && task.due_date ? (
-            <Badge
-              label={`${overdue ? 'Overdue · ' : ''}${relativeDayLabel(task.due_date, today)}${
-                dueTime ? ` ${dueTime}` : ''
-              }`}
-              tone={overdue ? 'negative' : 'neutral'}
-            />
-          ) : null}
-          {task.list_name ? <Badge label={task.list_name} /> : null}
-        </View>
+        {task.priority !== 'none' || (!hideDueDate && task.due_date) || task.list_name ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xxs }}>
+            {task.priority !== 'none' ? (
+              <Badge label={task.priority} tone={PRIORITY_TONE[task.priority]} dot />
+            ) : null}
+            {!hideDueDate && task.due_date ? (
+              <Badge
+                icon={overdue ? 'alert-circle-outline' : 'calendar-outline'}
+                label={`${overdue ? 'Overdue · ' : ''}${relativeDayLabel(task.due_date, today)}${
+                  dueTime ? ` ${dueTime}` : ''
+                }`}
+                tone={overdue ? 'negative' : 'neutral'}
+              />
+            ) : null}
+            {hideDueDate && dueTime ? <Badge icon="time-outline" label={dueTime} /> : null}
+            {task.list_name ? <Badge label={task.list_name} /> : null}
+          </View>
+        ) : null}
       </View>
+    </>
+  );
+
+  const layout = {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: gutter,
+    minHeight: minTouchTarget + spacing.sm,
+    paddingHorizontal: gutter,
+    paddingRight: compact ? spacing.md : spacing.lg,
+  };
+
+  if (!onPress) {
+    return <View style={layout}>{content}</View>;
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Edit ${task.title}`}
+      onPress={onPress}
+      style={(state) => {
+        const { pressed, hovered, focused } = pressState(state);
+        return [
+          layout,
+          transition(),
+          clickable(),
+          { backgroundColor: pressed || hovered ? theme.colors.surfaceHover : 'transparent' },
+          focusRing(theme.colors.focus, focused, -2),
+        ];
+      }}
+    >
+      {content}
     </Pressable>
   );
 }

@@ -1,12 +1,13 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { spacing, radius } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { useTheme } from '@/hooks/useTheme';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useToday } from '@/hooks/useToday';
 import { formatMoney } from '@/utils/money';
 import { budgetPeriodRange } from '@/features/budgets/progress';
@@ -18,19 +19,11 @@ import { useBudgetsWithProgress } from '@/features/budgets/api';
  * "0 of 0 spent" card would be noise, not a summary.
  */
 export function BudgetSummaryCard() {
-  const theme = useTheme();
   const router = useRouter();
   const { today } = useToday();
   const { data, isLoading } = useBudgetsWithProgress();
 
-  if (isLoading) {
-    return (
-      <Card style={{ gap: spacing.sm }}>
-        <Skeleton height={14} width="40%" />
-        <Skeleton height={20} width="70%" />
-      </Card>
-    );
-  }
+  if (isLoading) return <SkeletonCard />;
 
   const current = data.filter((entry) => {
     const range = budgetPeriodRange(entry.budget);
@@ -49,49 +42,50 @@ export function BudgetSummaryCard() {
 
   return (
     <Card style={{ gap: spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ThemedText
-          variant="label"
-          tone="muted"
-          weight="semibold"
-          accessibilityRole="header"
-          style={{ flex: 1 }}
-        >
-          BUDGET THIS PERIOD
-        </ThemedText>
-        <Button label="Open" size="sm" variant="ghost" onPress={() => router.push('/finance/budgets')} />
-      </View>
+      <SectionHeader
+        title="Budget this period"
+        action={
+          <Button
+            label="Open"
+            size="sm"
+            variant="ghost"
+            icon="arrow-forward"
+            iconPosition="trailing"
+            onPress={() => router.push('/finance/budgets')}
+          />
+        }
+      />
 
       {[...totalsByCurrency.entries()].map(([currency, totals]) => {
         const overspent = totals.spentMinor > totals.plannedMinor;
-        const progress = totals.plannedMinor > 0 ? Math.min(1, totals.spentMinor / totals.plannedMinor) : 0;
+        const progress = totals.plannedMinor > 0 ? totals.spentMinor / totals.plannedMinor : 0;
+        const remaining = totals.plannedMinor - totals.spentMinor;
 
         return (
-          <View key={currency} style={{ gap: spacing.xs }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <ThemedText variant="body">
-                {formatMoney(totals.spentMinor, currency)} of {formatMoney(totals.plannedMinor, currency)}
+          <View key={currency} style={{ gap: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm }}>
+              <ThemedText variant="subtitle" numeric style={{ flex: 1 }}>
+                {formatMoney(totals.spentMinor, currency)}
+                <ThemedText variant="label" tone="muted">
+                  {`  of ${formatMoney(totals.plannedMinor, currency)}`}
+                </ThemedText>
               </ThemedText>
-              <ThemedText variant="body" tone={overspent ? 'negative' : 'muted'}>
+              <ThemedText variant="label" weight="semibold" tone={overspent ? 'negative' : 'muted'}>
                 {overspent ? 'Over' : `${Math.round(progress * 100)}%`}
               </ThemedText>
             </View>
-            <View
-              style={{
-                height: 6,
-                borderRadius: radius.full,
-                backgroundColor: theme.colors.surfaceAlt,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  width: `${progress * 100}%`,
-                  height: '100%',
-                  backgroundColor: overspent ? theme.colors.negative : theme.colors.primary,
-                }}
-              />
-            </View>
+
+            <ProgressBar
+              value={progress}
+              tone={overspent ? 'negative' : progress > 0.85 ? 'warning' : 'primary'}
+              accessibilityLabel={`Budget in ${currency}, ${Math.round(progress * 100)} percent spent`}
+            />
+
+            <ThemedText variant="caption" tone={overspent ? 'negative' : 'muted'}>
+              {overspent
+                ? `${formatMoney(Math.abs(remaining), currency)} over budget`
+                : `${formatMoney(remaining, currency)} left`}
+            </ThemedText>
           </View>
         );
       })}

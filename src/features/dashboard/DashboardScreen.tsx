@@ -4,14 +4,21 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useLayout } from '@/hooks/useCompactLayout';
 import { radius, spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Card } from '@/components/ui/Card';
+import { List } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
-import { SkeletonList } from '@/components/ui/Skeleton';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { SkeletonCard, SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { useToday } from '@/hooks/useToday';
+import { useQuickCapture } from '@/components/layout/QuickAddButton';
 import { useProfile } from '@/features/auth/useProfile';
 import { formatIsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
@@ -33,12 +40,16 @@ import { GoalsSummaryCard } from '@/features/dashboard/GoalsSummaryCard';
  *
  * Nothing here is a summary the user can't verify by tapping through — the
  * numbers are the same derivations the feature screens use, not a separate
- * calculation that could drift.
+ * calculation that could drift. The cards flow into one column on a phone and
+ * into a responsive grid on a desktop, so a wide window shows the whole
+ * picture without scrolling instead of one tall ribbon of cards.
  */
 export function DashboardScreen() {
   const router = useRouter();
+  const { compact } = useLayout();
   const { today } = useToday();
   const { data: profile } = useProfile();
+  const { open: openQuickAdd } = useQuickCapture();
 
   const tasksQuery = useTasks();
   const habitsQuery = useHabits();
@@ -96,6 +107,7 @@ export function DashboardScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={refetch}
       refreshing={tasksQuery.isRefetching}
       header={
@@ -103,113 +115,157 @@ export function DashboardScreen() {
           title={firstName ? `Hello, ${firstName}` : 'Dashboard'}
           subtitle={formatIsoDate(today)}
           action={
-            <Button label="Search" size="sm" variant="secondary" onPress={() => router.push('/search')} />
+            compact ? (
+              <Button label="Quick add" size="sm" icon="add" onPress={openQuickAdd} />
+            ) : (
+              <Button
+                label="Search"
+                size="sm"
+                variant="secondary"
+                icon="search"
+                onPress={() => router.push('/search')}
+              />
+            )
           }
         />
       }
     >
       {isLoading ? (
-        <SkeletonList rows={5} />
+        <>
+          <SkeletonCard />
+          <SkeletonList rows={4} />
+        </>
       ) : (
         <>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             <QuickAction icon="add-circle-outline" label="Task" onPress={() => router.push('/tasks')} />
             <QuickAction icon="cash-outline" label="Spend" onPress={() => router.push('/finance')} />
             <QuickAction icon="document-text-outline" label="Note" onPress={() => router.push('/notes')} />
             <QuickAction icon="repeat-outline" label="Habits" onPress={() => router.push('/habits')} />
+            <QuickAction icon="scan-outline" label="Scan" onPress={() => router.push('/scan')} />
           </View>
 
-          <NetWorthCard />
-          <Button
-            label="Accounts"
-            size="sm"
-            variant="ghost"
-            onPress={() => router.push('/finance/accounts')}
-          />
+          <Grid minColumnWidth={320} maxColumns={2}>
+            <NetWorthCard />
 
-          <BudgetSummaryCard />
-          <GoalsSummaryCard />
-
-          {thisMonth.map((summary) => (
-            <Card key={summary.currency} style={{ gap: spacing.md }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                THIS MONTH · {summary.currency}
-              </ThemedText>
-              <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-                <Metric
-                  label="In"
-                  value={formatMoney(summary.incomeMinor, summary.currency)}
+            <Card style={{ gap: spacing.md }}>
+              <SectionHeader
+                title="Today"
+                action={
+                  <Button
+                    label="Open"
+                    size="sm"
+                    variant="ghost"
+                    icon="arrow-forward"
+                    iconPosition="trailing"
+                    onPress={() => router.push('/today')}
+                  />
+                }
+              />
+              <StatRow>
+                <Stat label="Tasks due" value={String(dueToday.length)} icon="checkbox-outline" />
+                <Stat
+                  label="Completed"
+                  value={String(doneToday.length)}
                   tone="positive"
+                  icon="checkmark-done-outline"
                 />
-                <Metric
-                  label="Out"
-                  value={formatMoney(summary.expenseMinor, summary.currency)}
-                  tone="negative"
+                <Stat
+                  label="Habits"
+                  value={`${habitProgress.done}/${habitProgress.total}`}
+                  icon="repeat-outline"
                 />
-              </View>
-              <Button label="Reports" size="sm" variant="ghost" onPress={() => router.push('/reports')} />
+              </StatRow>
             </Card>
-          ))}
 
-          <Card style={{ gap: spacing.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                TODAY
-              </ThemedText>
-              <View style={{ flex: 1 }} />
-              <Button label="Open" size="sm" variant="ghost" onPress={() => router.push('/today')} />
-            </View>
-            <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-              <Metric label="Tasks due" value={String(dueToday.length)} />
-              <Metric label="Completed" value={String(doneToday.length)} />
-              <Metric label="Habits" value={`${habitProgress.done}/${habitProgress.total}`} />
-            </View>
-          </Card>
+            {thisMonth.map((summary) => (
+              <Card key={summary.currency} style={{ gap: spacing.md }}>
+                <SectionHeader
+                  title={`This month · ${summary.currency}`}
+                  action={
+                    <Button
+                      label="Reports"
+                      size="sm"
+                      variant="ghost"
+                      icon="arrow-forward"
+                      iconPosition="trailing"
+                      onPress={() => router.push('/reports')}
+                    />
+                  }
+                />
+                <StatRow>
+                  <Stat
+                    label="Money in"
+                    value={formatMoney(summary.incomeMinor, summary.currency)}
+                    tone="positive"
+                    icon="arrow-down"
+                  />
+                  <Stat
+                    label="Money out"
+                    value={formatMoney(summary.expenseMinor, summary.currency)}
+                    tone="negative"
+                    icon="arrow-up"
+                  />
+                  <Stat
+                    label="Net"
+                    value={formatMoney(summary.incomeMinor - summary.expenseMinor, summary.currency)}
+                    tone={summary.incomeMinor - summary.expenseMinor < 0 ? 'negative' : 'default'}
+                  />
+                </StatRow>
+              </Card>
+            ))}
+
+            <BudgetSummaryCard />
+            <GoalsSummaryCard />
+          </Grid>
 
           {dueToday.length > 0 ? (
             <View style={{ gap: spacing.sm }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                DUE TODAY
-              </ThemedText>
-              <Card padded={false}>
-                {dueToday.slice(0, 5).map((task) => (
+              <SectionHeader
+                title="Due today"
+                count={dueToday.length}
+                action={
+                  <Button
+                    label="All tasks"
+                    size="sm"
+                    variant="ghost"
+                    icon="arrow-forward"
+                    iconPosition="trailing"
+                    onPress={() => router.push('/tasks')}
+                  />
+                }
+              />
+              <List>
+                {dueToday.slice(0, 6).map((task) => (
                   <TaskListItem
                     key={task.id}
                     task={task}
                     today={today}
+                    hideDueDate
                     onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
+                    onPress={() => router.push('/tasks')}
                   />
                 ))}
-              </Card>
+              </List>
             </View>
           ) : null}
+
+          <Button
+            label="Accounts"
+            variant="secondary"
+            icon="card-outline"
+            onPress={() => router.push('/finance/accounts')}
+          />
         </>
       )}
     </Screen>
   );
 }
 
-function Metric({
-  label,
-  value,
-  tone = 'default',
-}: {
-  label: string;
-  value: string;
-  tone?: 'default' | 'positive' | 'negative';
-}) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="subtitle" tone={tone}>
-        {value}
-      </ThemedText>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-    </View>
-  );
-}
-
+/**
+ * Compact shortcut tile. Sized to wrap two-up on the narrowest phones and to
+ * sit in a single row from tablet width upward.
+ */
 function QuickAction({
   icon,
   label,
@@ -226,20 +282,32 @@ function QuickAction({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => ({
-        flex: 1,
-        minWidth: 80,
-        alignItems: 'center',
-        gap: spacing.xs,
-        paddingVertical: spacing.md,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: pressed ? theme.colors.surfaceAlt : theme.colors.surface,
-      })}
+      style={(state) => {
+        const { pressed, hovered, focused } = pressState(state);
+        return [
+          {
+            flexGrow: 1,
+            flexBasis: 92,
+            maxWidth: 200,
+            alignItems: 'center' as const,
+            gap: spacing.xs,
+            paddingVertical: spacing.md,
+            paddingHorizontal: spacing.sm,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            borderColor: hovered ? theme.colors.borderStrong : theme.colors.border,
+            backgroundColor: pressed || hovered ? theme.colors.surfaceHover : theme.colors.surface,
+          },
+          transition(),
+          clickable(),
+          focusRing(theme.colors.focus, focused),
+        ];
+      }}
     >
-      <Ionicons name={icon} size={22} color={theme.colors.primary} />
-      <ThemedText variant="caption">{label}</ThemedText>
+      <Ionicons name={icon} size={20} color={theme.colors.primary} />
+      <ThemedText variant="caption" weight="medium">
+        {label}
+      </ThemedText>
     </Pressable>
   );
 }

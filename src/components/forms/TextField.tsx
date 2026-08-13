@@ -1,15 +1,16 @@
-import { TextInput, View, type TextInputProps } from 'react-native';
+import { TextInput, type TextInputProps } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { Field, inputChrome, useFieldFocus } from '@/components/forms/Field';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label: string;
   error?: string | null;
   helpText?: string;
   multiline?: boolean;
+  required?: boolean;
+  size?: 'md' | 'lg';
 }
 
 /**
@@ -18,35 +19,44 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
  * auth; this is the same visual treatment without requiring a form context for
  * what are often one- or two-field sheets.
  */
-export function TextField({ label, error, helpText, multiline, autoFocus, ...inputProps }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  helpText,
+  multiline,
+  required,
+  size,
+  autoFocus,
+  onFocus,
+  onBlur,
+  ...inputProps
+}: TextFieldProps) {
   const theme = useTheme();
   const compact = useCompactLayout();
+  const focus = useFieldFocus();
 
   return (
-    <View style={{ gap: spacing.xs }}>
-      <ThemedText variant="label" tone="muted">
-        {label}
-      </ThemedText>
+    <Field label={label} error={error} helpText={helpText} required={required}>
       <TextInput
         accessibilityLabel={label}
         aria-invalid={Boolean(error)}
         multiline={multiline}
-        style={{
-          minHeight: multiline ? minTouchTarget * 2.5 : minTouchTarget,
-          borderWidth: 1,
-          borderColor: error ? theme.colors.negative : theme.colors.border,
-          borderRadius: radius.md,
-          paddingHorizontal: spacing.md,
-          paddingTop: multiline ? spacing.sm : undefined,
-          textAlignVertical: multiline ? 'top' : 'center',
-          color: theme.colors.text,
-          backgroundColor: theme.colors.surface,
-          // Below 16px, iOS Safari zooms the whole page in on focus — with no
-          // way back out except scrolling/pinching manually. Every text field
-          // in the app must stay at 16px+ or that happens on every form sheet.
-          fontSize: fontSize.md,
-        }}
+        style={inputChrome(theme, {
+          focused: focus.focused,
+          invalid: Boolean(error),
+          multiline,
+          disabled: inputProps.editable === false,
+          size,
+        })}
         placeholderTextColor={theme.colors.textMuted}
+        onFocus={(event) => {
+          focus.onFocus();
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          focus.onBlur();
+          onBlur?.(event);
+        }}
         // Opening the software keyboard during the sheet animation makes the
         // entire form jump on iOS. On a phone, let the user see the field and
         // pinned submit action first, then open the keyboard on an intentional
@@ -54,15 +64,6 @@ export function TextField({ label, error, helpText, multiline, autoFocus, ...inp
         autoFocus={!compact && autoFocus}
         {...inputProps}
       />
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {error}
-        </ThemedText>
-      ) : helpText ? (
-        <ThemedText variant="caption" tone="muted">
-          {helpText}
-        </ThemedText>
-      ) : null}
-    </View>
+    </Field>
   );
 }

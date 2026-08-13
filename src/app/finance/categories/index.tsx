@@ -4,18 +4,18 @@ import { View } from 'react-native';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List, ListRow } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormActions, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { toUserMessage } from '@/utils/errors';
 import {
   useArchiveCategory,
   useCategories,
@@ -55,9 +55,10 @@ export default function CategoriesScreen() {
       refreshing={isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Money"
           title="Categories"
           subtitle="How spending and income are grouped in reports."
-          action={<Button label="Add" size="sm" onPress={() => openSheet(null)} />}
+          action={<Button label="Add category" size="sm" icon="add" onPress={() => openSheet(null)} />}
         />
       }
     >
@@ -68,52 +69,44 @@ export default function CategoriesScreen() {
       ) : (categories?.length ?? 0) === 0 ? (
         <View style={{ gap: spacing.lg }}>
           <EmptyState
+            icon="pricetags-outline"
             title="No categories yet"
             description="Start from a common set for Nepal, or add your own from scratch."
             actionLabel="Use the starter set"
             onAction={() => seedStarters.mutate()}
+            secondaryActionLabel="Add my own"
+            onSecondaryAction={() => openSheet(null)}
           />
-          <Button label="Add my own" variant="secondary" onPress={() => openSheet(null)} />
-          {seedStarters.error ? (
-            <ThemedText variant="caption" tone="negative">
-              {toUserMessage(seedStarters.error)}
-            </ThemedText>
-          ) : null}
+          <FormError error={seedStarters.error} />
         </View>
       ) : (
         byKind.map((group) => (
           <View key={group.value} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {group.label.toUpperCase()}
-            </ThemedText>
-            <Card padded={false}>
+            <SectionHeader title={group.label} count={group.rows.length} />
+            <List>
               {group.rows.map((category) => (
-                <View
+                <ListRow
                   key={category.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    paddingLeft: spacing.md,
-                  }}
-                >
-                  <ThemedText variant="body" style={{ flex: 1 }}>
-                    {category.name}
-                  </ThemedText>
-                  {category.is_system ? <Badge label="Starter" /> : null}
-                  <IconButton
-                    icon="create-outline"
-                    accessibilityLabel={`Rename ${category.name}`}
-                    onPress={() => openSheet(category)}
-                  />
-                  <IconButton
-                    icon="archive-outline"
-                    accessibilityLabel={`Archive ${category.name}`}
-                    onPress={() => archiveCategory.mutate(category.id)}
-                  />
-                </View>
+                  title={category.name}
+                  icon={group.value === 'income' ? 'arrow-down' : 'pricetag-outline'}
+                  iconTone={group.value === 'income' ? 'positive' : 'muted'}
+                  onPress={() => openSheet(category)}
+                  accessibilityLabel={`Rename ${category.name}`}
+                  trailing={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                      {category.is_system ? <Badge label="Starter" /> : null}
+                      <View onStartShouldSetResponder={() => true}>
+                        <IconButton
+                          icon="archive-outline"
+                          accessibilityLabel={`Archive ${category.name}`}
+                          onPress={() => archiveCategory.mutate(category.id)}
+                        />
+                      </View>
+                    </View>
+                  }
+                />
               ))}
-            </Card>
+            </List>
           </View>
         ))
       )}
@@ -167,11 +160,7 @@ function CategoryFormSheet({
       visible={visible}
       title={category ? 'Rename category' : 'New category'}
       onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
-        </View>
-      }
+      footer={<FormActions pending={pending} onSave={() => void handleSave()} />}
     >
       <TextField
         label="Name"
@@ -181,15 +170,19 @@ function CategoryFormSheet({
           if (nameError) setNameError(null);
         }}
         error={nameError}
+        required
         placeholder="e.g. Groceries"
         autoFocus
+        size="lg"
       />
-      <OptionGroup label="Applies to" options={KIND_OPTIONS} value={kind} onChange={setKind} />
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <OptionGroup
+        label="Applies to"
+        variant="segmented"
+        options={KIND_OPTIONS}
+        value={kind}
+        onChange={setKind}
+      />
+      <FormError error={error} />
     </FormSheet>
   );
 }

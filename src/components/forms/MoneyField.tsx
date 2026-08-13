@@ -2,8 +2,10 @@ import { TextInput, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
+import { fontSize, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { Field, inputChrome, useFieldFocus } from '@/components/forms/Field';
+import { webStyle } from '@/utils/interaction';
 import { minorUnitsFor } from '@/utils/money';
 
 export interface MoneyFieldProps {
@@ -12,7 +14,9 @@ export interface MoneyFieldProps {
   onChangeText: (value: string) => void;
   currency: string;
   error?: string | null;
+  helpText?: string;
   autoFocus?: boolean;
+  required?: boolean;
 }
 
 /**
@@ -23,10 +27,24 @@ export interface MoneyFieldProps {
  * rounding error the integer-minor-unit rule exists to prevent. Input is
  * filtered to digits and a single decimal point, capped at the currency's
  * decimal places, so an unconvertible value can't be typed in the first place.
+ *
+ * Visually it is the one oversized field in any form: the amount is the thing
+ * being entered, and a 22px tabular figure is far easier to check for a typo'd
+ * extra zero than body text is.
  */
-export function MoneyField({ label, value, onChangeText, currency, error, autoFocus }: MoneyFieldProps) {
+export function MoneyField({
+  label,
+  value,
+  onChangeText,
+  currency,
+  error,
+  helpText,
+  autoFocus,
+  required,
+}: MoneyFieldProps) {
   const theme = useTheme();
   const compact = useCompactLayout();
+  const focus = useFieldFocus();
   const decimals = minorUnitsFor(currency);
 
   function handleChange(text: string) {
@@ -37,24 +55,19 @@ export function MoneyField({ label, value, onChangeText, currency, error, autoFo
   }
 
   return (
-    <View style={{ gap: spacing.xs }}>
-      <ThemedText variant="label" tone="muted">
-        {label}
-      </ThemedText>
+    <Field label={label} error={error} helpText={helpText} required={required}>
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.sm,
-          minHeight: minTouchTarget,
-          paddingHorizontal: spacing.md,
-          borderWidth: 1,
-          borderColor: error ? theme.colors.negative : theme.colors.border,
-          borderRadius: radius.md,
-          backgroundColor: theme.colors.surface,
-        }}
+        style={[
+          inputChrome(theme, { focused: focus.focused, invalid: Boolean(error), size: 'lg' }),
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            paddingVertical: 0,
+          },
+        ]}
       >
-        <ThemedText variant="body" tone="muted">
+        <ThemedText variant="body" tone="muted" weight="semibold">
           {currency}
         </ThemedText>
         <TextInput
@@ -62,18 +75,25 @@ export function MoneyField({ label, value, onChangeText, currency, error, autoFo
           aria-invalid={Boolean(error)}
           value={value}
           onChangeText={handleChange}
+          onFocus={focus.onFocus}
+          onBlur={focus.onBlur}
           placeholder="0.00"
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={theme.colors.textSubtle}
           keyboardType="decimal-pad"
+          inputMode="decimal"
           autoFocus={!compact && autoFocus}
-          style={{ flex: 1, color: theme.colors.text, fontSize: fontSize.xl, paddingVertical: spacing.sm }}
+          style={[
+            {
+              flex: 1,
+              color: theme.colors.text,
+              fontSize: fontSize.xl,
+              fontWeight: '600',
+              paddingVertical: spacing.sm,
+            },
+            webStyle({ outlineStyle: 'none', fontVariantNumeric: 'tabular-nums' }),
+          ]}
         />
       </View>
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {error}
-        </ThemedText>
-      ) : null}
-    </View>
+    </Field>
   );
 }

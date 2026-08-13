@@ -2,7 +2,8 @@ import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/theme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
+import { minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Badge } from '@/components/ui/Badge';
 import { IconButton } from '@/components/ui/IconButton';
@@ -26,7 +27,8 @@ export interface TransactionListItemProps {
  * Direction is carried by an explicit sign and an arrow icon as well as
  * colour, so the row still reads correctly for someone who can't distinguish
  * the red/green pair — the accessibility rule the theme's `positive` /
- * `negative` tokens are documented under.
+ * `negative` tokens are documented under. The amount is tabular so a column of
+ * them lines up on the decimal point.
  */
 export function TransactionListItem({
   transaction,
@@ -38,6 +40,7 @@ export function TransactionListItem({
   onDelete,
 }: TransactionListItemProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
 
   const isIncome = transaction.transaction_type === 'income';
   const isTransfer = transaction.transaction_type === 'transfer';
@@ -50,22 +53,39 @@ export function TransactionListItem({
     : isIncome
       ? theme.colors.positive
       : theme.colors.negative;
+  const iconBackground = isTransfer
+    ? theme.colors.surfaceAlt
+    : isIncome
+      ? theme.colors.positiveSurface
+      : theme.colors.negativeSurface;
 
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.md,
+        gap: compact ? spacing.md : spacing.lg,
+        minHeight: minTouchTarget + spacing.sm,
         paddingVertical: spacing.md,
-        paddingLeft: spacing.md,
-        paddingRight: onDelete ? spacing.xs : spacing.md,
+        paddingLeft: compact ? spacing.md : spacing.lg,
+        paddingRight: onDelete ? spacing.sm : compact ? spacing.md : spacing.lg,
       }}
     >
-      <Ionicons name={icon} size={20} color={iconColor} />
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: iconBackground,
+        }}
+      >
+        <Ionicons name={icon} size={18} color={iconColor} />
+      </View>
 
-      <View style={{ flex: 1, gap: spacing.xxs }}>
-        <ThemedText variant="body" numberOfLines={1}>
+      <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+        <ThemedText variant="body" weight="medium" numberOfLines={1}>
           {transaction.description || counterpartyName || categoryName || 'Transaction'}
         </ThemedText>
         <ThemedText variant="caption" tone="muted" numberOfLines={1}>
@@ -75,13 +95,13 @@ export function TransactionListItem({
         </ThemedText>
         {categoryName || counterpartyName ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xxs }}>
-            {categoryName ? <Badge label={categoryName} /> : null}
+            {categoryName ? <Badge label={categoryName} icon="pricetag-outline" /> : null}
             {counterpartyName ? <Badge label={counterpartyName} tone="primary" /> : null}
           </View>
         ) : null}
       </View>
 
-      <ThemedText variant="body" weight="semibold" tone={tone}>
+      <ThemedText variant="body" weight="semibold" tone={tone} numeric numberOfLines={1}>
         {sign}
         {formatMoney(transaction.amount_minor, transaction.currency)}
       </ThemedText>
@@ -89,6 +109,7 @@ export function TransactionListItem({
       {onDelete ? (
         <IconButton
           icon="trash-outline"
+          tone="muted"
           accessibilityLabel={`Delete ${transaction.description || 'transaction'} of ${formatMoney(
             transaction.amount_minor,
             transaction.currency

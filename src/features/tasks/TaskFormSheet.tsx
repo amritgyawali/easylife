@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import type { TaskPriority } from '@/types/database';
 import { useCreateTask, useDeleteTask, useProjects, useUpdateTask, type TaskRow } from '@/features/tasks/api';
@@ -90,28 +87,27 @@ export function TaskFormSheet({ visible, onClose, task, defaultDueDate = null }:
     <FormSheet
       visible={visible}
       title={task ? 'Edit task' : 'New task'}
+      subtitle={task ? undefined : 'Give it a name now and fill in the rest whenever.'}
       onClose={onClose}
       footer={
-        <>
-          {task ? (
-            <Button
-              label="Delete"
-              variant="danger"
-              disabled={pending}
-              onPress={async () => {
-                await deleteTask.mutateAsync(task.id);
-                onClose();
-              }}
-            />
-          ) : null}
-          <View style={{ flex: 1 }}>
-            <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
-          </View>
-        </>
+        <FormActions
+          pending={pending}
+          onSave={() => void handleSave()}
+          saveLabel={task ? 'Save changes' : 'Add task'}
+          onDelete={
+            task
+              ? async () => {
+                  await deleteTask.mutateAsync(task.id);
+                  onClose();
+                }
+              : undefined
+          }
+        />
       }
     >
       <TextField
         label="Task"
+        required
         value={title}
         onChangeText={(value) => {
           setTitle(value);
@@ -120,6 +116,7 @@ export function TaskFormSheet({ visible, onClose, task, defaultDueDate = null }:
         error={titleError}
         placeholder="What needs doing?"
         autoFocus
+        size="lg"
       />
 
       <TextField
@@ -143,11 +140,7 @@ export function TaskFormSheet({ visible, onClose, task, defaultDueDate = null }:
         />
       ) : null}
 
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={error} />
     </FormSheet>
   );
 }

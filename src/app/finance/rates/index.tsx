@@ -1,23 +1,20 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { List, ListRow } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import { formatIsoDate, type IsoDate } from '@/utils/date';
 import {
   useDeleteExchangeRate,
@@ -45,9 +42,10 @@ export default function ExchangeRatesScreen() {
       refreshing={isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Money"
           title="Exchange rates"
           subtitle="Entered by hand — there is no live rate feed."
-          action={<Button label="Add rate" size="sm" onPress={() => setSheetOpen(true)} />}
+          action={<Button label="Add rate" size="sm" icon="add" onPress={() => setSheetOpen(true)} />}
         />
       }
     >
@@ -57,39 +55,31 @@ export default function ExchangeRatesScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (rates?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="swap-horizontal-outline"
           title="No rates recorded"
           description="Without a rate, totals in other currencies are listed separately instead of being combined."
           actionLabel="Add rate"
           onAction={() => setSheetOpen(true)}
         />
       ) : (
-        <Card padded={false}>
+        <List>
           {rates?.map((rate) => (
-            <View
+            <ListRow
               key={rate.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.sm,
-                paddingLeft: spacing.md,
-              }}
-            >
-              <View style={{ flex: 1, gap: spacing.xxs, paddingVertical: spacing.sm }}>
-                <ThemedText variant="body">
-                  1 {rate.from_currency} = {rate.rate} {rate.to_currency}
-                </ThemedText>
-                <ThemedText variant="caption" tone="muted">
-                  As of {formatIsoDate(rate.as_of_date)}
-                </ThemedText>
-              </View>
-              <IconButton
-                icon="trash-outline"
-                accessibilityLabel={`Delete rate ${rate.from_currency} to ${rate.to_currency}`}
-                onPress={() => deleteRate.mutate(rate.id)}
-              />
-            </View>
+              icon="swap-horizontal"
+              title={`1 ${rate.from_currency} = ${rate.rate} ${rate.to_currency}`}
+              subtitle={`As of ${formatIsoDate(rate.as_of_date)}`}
+              trailing={
+                <IconButton
+                  icon="trash-outline"
+                  tone="muted"
+                  accessibilityLabel={`Delete rate ${rate.from_currency} to ${rate.to_currency}`}
+                  onPress={() => deleteRate.mutate(rate.id)}
+                />
+              }
+            />
           ))}
-        </Card>
+        </List>
       )}
 
       <RateFormSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />
@@ -134,36 +124,31 @@ function RateFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
     <FormSheet
       visible={visible}
       title="Add exchange rate"
+      subtitle="Used to combine currencies in net worth and transfers."
       onClose={onClose}
-      footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={saveRate.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
-      }
+      footer={<FormActions pending={saveRate.isPending} onSave={() => void handleSave()} saveLabel="Save rate" />}
     >
-      <OptionGroup
-        label="From"
-        options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        value={fromCurrency}
-        onChange={(value) => {
-          setFromCurrency(value);
-          setErrors((current) => ({ ...current, pair: undefined }));
-        }}
-      />
-      <OptionGroup
-        label="To"
-        options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        value={toCurrency}
-        onChange={(value) => {
-          setToCurrency(value);
-          setErrors((current) => ({ ...current, pair: undefined }));
-        }}
-      />
-      {errors.pair ? (
-        <ThemedText variant="caption" tone="negative">
-          {errors.pair}
-        </ThemedText>
-      ) : null}
+      <FormRow>
+        <OptionGroup
+          label="From"
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          value={fromCurrency}
+          error={errors.pair}
+          onChange={(value) => {
+            setFromCurrency(value);
+            setErrors((current) => ({ ...current, pair: undefined }));
+          }}
+        />
+        <OptionGroup
+          label="To"
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          value={toCurrency}
+          onChange={(value) => {
+            setToCurrency(value);
+            setErrors((current) => ({ ...current, pair: undefined }));
+          }}
+        />
+      </FormRow>
 
       <TextField
         label={`How many ${toCurrency} for 1 ${fromCurrency}?`}
@@ -173,6 +158,7 @@ function RateFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
           setErrors((current) => ({ ...current, rate: undefined }));
         }}
         error={errors.rate}
+        required
         keyboardType="decimal-pad"
         placeholder="e.g. 0.0115"
         helpText="Recording one direction is enough — the reverse is derived from it."
@@ -186,11 +172,7 @@ function RateFormSheet({ visible, onClose }: { visible: boolean; onClose: () => 
         clearable={false}
       />
 
-      {saveRate.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(saveRate.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={saveRate.error} />
     </FormSheet>
   );
 }

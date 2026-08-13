@@ -4,14 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
-import { useCompactLayout } from '@/hooks/useCompactLayout';
+import { useLayout } from '@/hooks/useCompactLayout';
 import { minTouchTarget, radius, spacing } from '@/constants/theme';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { IconButton } from '@/components/ui/IconButton';
 
 export interface BottomSheetProps extends PropsWithChildren {
   visible: boolean;
   title: string;
+  /** Optional line under the title explaining what the form does. */
+  subtitle?: string;
   onClose: () => void;
   /** Action row pinned below the scrollable body, e.g. Save / Cancel. */
   footer?: ReactNode;
@@ -20,17 +23,27 @@ export interface BottomSheetProps extends PropsWithChildren {
    * gutters so full-bleed rows — a menu list, say — can span edge to edge.
    */
   body?: 'padded' | 'flush';
+  /** Dialog width on desktop. `lg` suits two-column forms (imports, scan). */
+  size?: 'md' | 'lg';
 }
 
 /** Share of the visible viewport a sheet may occupy before its body scrolls. */
 const MAX_HEIGHT_RATIO = 0.9;
 const COMPACT_MAX_HEIGHT_RATIO = 0.84;
 
+const DIALOG_WIDTH = { md: 560, lg: 760 } as const;
+
 /**
- * The one modal shell every bottom sheet in the app is built on.
+ * The one modal shell every sheet and dialog in the app is built on.
  *
- * Consolidated so the three things that are easy to get subtly wrong on mobile
- * live in exactly one place:
+ * It presents differently by form factor, because the same presentation is
+ * wrong on both: on a phone it is a bottom sheet, anchored to the thumb, with
+ * a grab handle and safe-area padding; on a desktop viewport it is a centred
+ * dialog with a capped width, because a full-width sheet glued to the bottom
+ * of a 1600px window is neither reachable nor readable.
+ *
+ * Consolidated here so the three things that are easy to get subtly wrong on
+ * mobile live in exactly one place:
  *
  * 1. **Height tracks the *visible* viewport, not the layout viewport.**
  *    react-native-web renders `Modal` as a `position: fixed` overlay, which
@@ -54,13 +67,15 @@ const COMPACT_MAX_HEIGHT_RATIO = 0.84;
 export function BottomSheet({
   visible,
   title,
+  subtitle,
   onClose,
   footer,
   body = 'padded',
+  size = 'md',
   children,
 }: BottomSheetProps) {
   const theme = useTheme();
-  const compact = useCompactLayout();
+  const { compact } = useLayout();
   const insets = useSafeAreaInsets();
   const visualViewport = useVisualViewport();
   const sheetSpacing = compact ? spacing.md : spacing.lg;
@@ -80,7 +95,11 @@ export function BottomSheet({
       : { flex: 1 };
 
   // Reason (3). Only the last element carries it, so it is never doubled.
-  const safeBottom = Math.max(sheetSpacing, insets.bottom);
+  const safeBottom = compact ? Math.max(sheetSpacing, insets.bottom) : sheetSpacing;
+
+  const panelRadius = compact
+    ? { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }
+    : { borderRadius: radius.lg };
 
   return (
     <Modal
@@ -89,17 +108,28 @@ export function BottomSheet({
       // react-native-web's slide animation leaves a transformed fixed layer,
       // which compounds Safari's keyboard viewport bugs. Native keeps the
       // platform-conventional slide; web uses a compositor-safe fade.
-      animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
+      animationType={Platform.OS === 'web' ? 'fade' : compact ? 'slide' : 'fade'}
       onRequestClose={onClose}
       accessibilityViewIsModal
+      statusBarTranslucent
     >
-      <View style={[scrim, { backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }]}>
+      <View
+        style={[
+          scrim,
+          {
+            backgroundColor: theme.colors.overlay,
+            justifyContent: compact ? 'flex-end' : 'center',
+            alignItems: compact ? 'stretch' : 'center',
+            padding: compact ? 0 : spacing.xl,
+          },
+        ]}
+      >
         {/* Tapping the scrim dismisses, matching the platform convention. */}
         <Pressable
           accessibilityLabel="Close"
           accessibilityRole="button"
           onPress={onClose}
-          style={{ flex: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
         <KeyboardAvoidingView
           // `padding` makes the entire sheet rise by the keyboard height on
@@ -108,7 +138,8 @@ export function BottomSheet({
           behavior={Platform.OS === 'ios' ? 'height' : undefined}
           style={{
             maxHeight: `${maxHeightRatio * 100}%`,
-            marginHorizontal: compact ? spacing.sm : 0,
+            width: compact ? '100%' : '100%',
+            maxWidth: compact ? undefined : DIALOG_WIDTH[size],
             overflow: 'hidden',
           }}
         >
@@ -119,39 +150,49 @@ export function BottomSheet({
               minHeight: 0,
               overflow: 'hidden',
               backgroundColor: theme.colors.background,
-              borderTopLeftRadius: compact ? radius.lg : radius.xl,
-              borderTopRightRadius: compact ? radius.lg : radius.xl,
-              borderTopWidth: 1,
+              borderWidth: 1,
               borderColor: theme.colors.border,
+              ...panelRadius,
+              ...theme.elevation.lg,
             }}
           >
+            {compact ? (
+              <View style={{ alignItems: 'center', paddingTop: spacing.sm }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 4,
+                    borderRadius: radius.full,
+                    backgroundColor: theme.colors.borderStrong,
+                  }}
+                />
+              </View>
+            ) : null}
+
             <View
               style={{
                 flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: spacing.md,
                 padding: sheetSpacing,
+                paddingBottom: subtitle ? sheetSpacing : spacing.md,
                 borderBottomWidth: 1,
                 borderBottomColor: theme.colors.border,
               }}
             >
-              <ThemedText variant="subtitle" accessibilityRole="header">
-                {title}
-              </ThemedText>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-                onPress={onClose}
-                hitSlop={12}
-                style={{
-                  minWidth: minTouchTarget,
-                  minHeight: minTouchTarget,
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
-              </Pressable>
+              <View style={{ flex: 1, gap: spacing.xxs }}>
+                <ThemedText variant="subtitle" accessibilityRole="header">
+                  {title}
+                </ThemedText>
+                {subtitle ? (
+                  <ThemedText variant="label" tone="muted">
+                    {subtitle}
+                  </ThemedText>
+                ) : null}
+              </View>
+              <View style={{ marginTop: -spacing.xs, marginRight: -spacing.sm }}>
+                <IconButton icon="close" accessibilityLabel="Close" onPress={onClose} tone="muted" size={22} />
+              </View>
             </View>
 
             {/* Reason (2): the one region that may shrink below its content. */}
@@ -182,6 +223,7 @@ export function BottomSheet({
                   paddingBottom: safeBottom,
                   borderTopWidth: 1,
                   borderTopColor: theme.colors.border,
+                  backgroundColor: theme.colors.surface,
                 }}
               >
                 {footer}

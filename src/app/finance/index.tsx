@@ -5,15 +5,17 @@ import { useRouter } from 'expo-router';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { List } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { useToday } from '@/hooks/useToday';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
+import { formatMoney } from '@/utils/money';
 import { relativeDayLabel } from '@/utils/date';
 import { useAccounts } from '@/features/finance/accounts-api';
 import { useCategories } from '@/features/finance/categories-api';
@@ -28,9 +30,16 @@ import { TransactionFormSheet } from '@/features/finance/TransactionFormSheet';
 
 type KindFilter = 'all' | 'expense' | 'income' | 'transfer';
 
+/**
+ * The ledger: every transaction, newest first, grouped by day.
+ *
+ * The day heading carries that day's net movement, so scanning the list
+ * answers "what did today cost me" without adding anything up by hand.
+ */
 export default function TransactionsScreen() {
   const router = useRouter();
   const { today } = useToday();
+  const compact = useCompactLayout();
 
   const transactionsQuery = useTransactions();
   const { data: accounts } = useAccounts();
@@ -111,19 +120,28 @@ export default function TransactionsScreen() {
           <ScreenHeader
             title="Transactions"
             subtitle="Every entry posts to the double-entry ledger."
-            action={<Button label="Add" size="sm" onPress={() => setSheetOpen(true)} />}
+            action={
+              <Button label="Add transaction" size="sm" icon="add" onPress={() => setSheetOpen(true)} />
+            }
           />
-          <SearchInput value={query} onChangeText={setQuery} placeholder="Search transactions" />
-          <OptionGroup
-            options={[
-              { value: 'all', label: 'All' },
-              { value: 'expense', label: 'Expense' },
-              { value: 'income', label: 'Income' },
-              { value: 'transfer', label: 'Transfer' },
-            ]}
-            value={kind}
-            onChange={setKind}
-          />
+          <View style={{ flexDirection: compact ? 'column' : 'row', gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <SearchInput value={query} onChangeText={setQuery} placeholder="Search transactions" />
+            </View>
+            <View style={{ width: compact ? undefined : 340 }}>
+              <OptionGroup
+                variant="segmented"
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'expense', label: 'Out' },
+                  { value: 'income', label: 'In' },
+                  { value: 'transfer', label: 'Transfer' },
+                ]}
+                value={kind}
+                onChange={setKind}
+              />
+            </View>
+          </View>
         </>
       }
     >
@@ -133,6 +151,7 @@ export default function TransactionsScreen() {
         <ErrorState error={transactionsQuery.error} onRetry={() => void transactionsQuery.refetch()} />
       ) : (accounts?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="card-outline"
           title="Add an account first"
           description="Transactions post against an account, so there needs to be at least one."
           actionLabel="Go to accounts"
@@ -140,6 +159,7 @@ export default function TransactionsScreen() {
         />
       ) : byDay.length === 0 ? (
         <EmptyState
+          icon="swap-vertical-outline"
           title={query || kind !== 'all' ? 'No matching transactions' : 'No transactions yet'}
           description={
             query || kind !== 'all'
@@ -152,10 +172,11 @@ export default function TransactionsScreen() {
       ) : (
         byDay.map(([date, transactions]) => (
           <View key={date} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {relativeDayLabel(date, today).toUpperCase()}
-            </ThemedText>
-            <Card padded={false}>
+            <SectionHeader
+              title={relativeDayLabel(date, today)}
+              description={dayTotals(transactions)}
+            />
+            <List>
               {transactions.map((transaction) => (
                 <TransactionListItem
                   key={transaction.id}
@@ -168,7 +189,7 @@ export default function TransactionsScreen() {
                   onDelete={() => confirmDelete(transaction)}
                 />
               ))}
-            </Card>
+            </List>
           </View>
         ))
       )}
@@ -176,4 +197,26 @@ export default function TransactionsScreen() {
       <TransactionFormSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />
     </Screen>
   );
+}
+
+/**
+ * Net movement for one day, per currency — "-42.10 USD", or both sides when
+ * the day had income too. Transfers are excluded: money moving between your
+ * own accounts is not a day's spending.
+ */
+function dayTotals(transactions: TransactionRow[]): string {
+  const netByCurrency = new Map<string, number>();
+
+  for (const transaction of transactions) {
+    if (transaction.transaction_type === 'transfer') continue;
+    const signed =
+      transaction.transaction_type === 'income' ? transaction.amount_minor : -transaction.amount_minor;
+    netByCurrency.set(transaction.currency, (netByCurrency.get(transaction.currency) ?? 0) + signed);
+  }
+
+  if (netByCurrency.size === 0) return 'Transfers only';
+
+  return [...netByCurrency.entries()]
+    .map(([currency, net]) => `${net > 0 ? '+' : ''}${formatMoney(net, currency)}`)
+    .join(' · ');
 }

@@ -1,32 +1,48 @@
-import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
-import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
+import { useLayout } from '@/hooks/useCompactLayout';
+import { layout, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { FormSheet } from '@/components/ui/FormSheet';
+import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { useToday } from '@/hooks/useToday';
 import { useQuickAdd } from '@/features/quick-add/api';
 
 type QuickKind = 'task' | 'note';
 
+interface QuickCapture {
+  open: () => void;
+}
+
+const QuickAddContext = createContext<QuickCapture>({ open: () => {} });
+
+/** Opens the quick-add sheet from anywhere in the shell (FAB, top bar, tab). */
+export function useQuickCapture(): QuickCapture {
+  return useContext(QuickAddContext);
+}
+
 /**
- * A floating "＋" available on every screen, for capturing a task or note in
- * two taps without navigating away from whatever you were doing.
+ * Capture-anywhere entry point for a task or a note, in two taps, without
+ * navigating away from whatever you were doing.
  *
  * It writes through the durable offline path (`useQuickAdd`), so a capture on a
  * subway platform is saved instantly and synced later — the whole point of a
  * quick-add is that it must never fail because the network did.
+ *
+ * The sheet lives in a provider rather than inside the button because the two
+ * form factors trigger it from different chrome: a floating action button on a
+ * phone, a "New" button in the desktop top bar, where a FAB floating over a
+ * 1600px window would be both odd and far from the pointer.
  */
-export function QuickAddButton() {
+export function QuickAddProvider({ children }: PropsWithChildren) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const compact = useCompactLayout();
   const { today } = useToday();
   const { addTask, addNote } = useQuickAdd();
 
@@ -36,16 +52,14 @@ export function QuickAddButton() {
   const [body, setBody] = useState('');
   const [dueToday, setDueToday] = useState(false);
 
-  const reset = () => {
+  const value = useMemo<QuickCapture>(() => ({ open: () => setOpen(true) }), []);
+
+  const close = () => {
+    setOpen(false);
     setTitle('');
     setBody('');
     setDueToday(false);
     setKind('task');
-  };
-
-  const close = () => {
-    setOpen(false);
-    reset();
   };
 
   const submit = () => {
@@ -58,120 +72,148 @@ export function QuickAddButton() {
     close();
   };
 
-  // Clear the mobile tab bar; sit in the normal margin on desktop.
-  const bottom = (compact ? minTouchTarget + spacing.xl : spacing.xl) + insets.bottom;
-
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Quick add"
-        onPress={() => setOpen(true)}
-        style={({ pressed }) => ({
-          position: 'absolute',
-          right: spacing.lg,
-          bottom,
-          width: 56,
-          height: 56,
-          borderRadius: radius.full,
-          backgroundColor: theme.colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: pressed ? 0.85 : 1,
-          shadowColor: '#000',
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 6,
-        })}
-      >
-        <Ionicons name="add" size={30} color={theme.colors.primaryText} />
-      </Pressable>
+    <QuickAddContext.Provider value={value}>
+      {children}
 
       <FormSheet
         visible={open}
         onClose={close}
         title="Quick add"
+        subtitle="Saved on this device straight away, synced when you're online."
         footer={
           <>
             <View style={{ flex: 1 }}>
-              <Button label="Cancel" variant="ghost" onPress={close} />
+              <Button label="Cancel" variant="secondary" onPress={close} fullWidth />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="Add" onPress={submit} disabled={!title.trim()} />
+              <Button
+                label="Add"
+                icon="checkmark"
+                onPress={submit}
+                disabled={!title.trim()}
+                fullWidth
+              />
             </View>
           </>
         }
       >
         <OptionGroup
+          variant="segmented"
           options={[
-            { value: 'task', label: 'Task' },
-            { value: 'note', label: 'Note' },
+            { value: 'task', label: 'Task', icon: 'checkbox-outline' },
+            { value: 'note', label: 'Note', icon: 'document-text-outline' },
           ]}
           value={kind}
           onChange={(value) => setKind(value as QuickKind)}
         />
 
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted">
-            {kind === 'task' ? 'What needs doing?' : 'Title'}
-          </ThemedText>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            autoFocus={!compact}
-            placeholder={kind === 'task' ? 'e.g. Pay electricity bill' : 'Note title'}
-            placeholderTextColor={theme.colors.textMuted}
-            onSubmitEditing={submit}
-            returnKeyType="done"
-            style={inputStyle(theme)}
-          />
-        </View>
+        <TextField
+          label={kind === 'task' ? 'What needs doing?' : 'Title'}
+          value={title}
+          onChangeText={setTitle}
+          autoFocus
+          size="lg"
+          placeholder={kind === 'task' ? 'e.g. Pay electricity bill' : 'Note title'}
+          onSubmitEditing={submit}
+          returnKeyType="done"
+        />
 
         {kind === 'task' ? (
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: dueToday }}
+            accessibilityLabel="Due today"
             onPress={() => setDueToday((value) => !value)}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+            style={(state) => {
+              const { hovered, focused } = pressState(state);
+              return [
+                {
+                  flexDirection: 'row' as const,
+                  alignItems: 'center' as const,
+                  gap: spacing.sm,
+                  minHeight: minTouchTarget,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: radius.md,
+                  borderWidth: 1,
+                  borderColor: dueToday ? theme.colors.primary : theme.colors.border,
+                  backgroundColor: dueToday
+                    ? theme.colors.accentSurface
+                    : hovered
+                      ? theme.colors.surfaceHover
+                      : theme.colors.surface,
+                },
+                transition(),
+                clickable(),
+                focusRing(theme.colors.focus, focused),
+              ];
+            }}
           >
             <Ionicons
               name={dueToday ? 'checkbox' : 'square-outline'}
-              size={22}
+              size={20}
               color={dueToday ? theme.colors.primary : theme.colors.textMuted}
             />
-            <ThemedText variant="body">Due today</ThemedText>
+            <ThemedText variant="body" tone={dueToday ? 'primary' : 'default'}>
+              Due today
+            </ThemedText>
           </Pressable>
         ) : (
-          <View style={{ gap: spacing.xs }}>
-            <ThemedText variant="label" tone="muted">
-              Note (optional)
-            </ThemedText>
-            <TextInput
-              value={body}
-              onChangeText={setBody}
-              placeholder="Write something…"
-              placeholderTextColor={theme.colors.textMuted}
-              multiline
-              style={[inputStyle(theme), { minHeight: 96, textAlignVertical: 'top' }]}
-            />
-          </View>
+          <TextField
+            label="Note"
+            value={body}
+            onChangeText={setBody}
+            placeholder="Write something…"
+            multiline
+            helpText="Optional — you can fill this in later."
+          />
         )}
       </FormSheet>
-    </>
+    </QuickAddContext.Provider>
   );
 }
 
-function inputStyle(theme: ReturnType<typeof useTheme>) {
-  return {
-    minHeight: minTouchTarget,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: theme.colors.text,
-    // Below 16px, iOS Safari zooms the whole page in on focus.
-    fontSize: fontSize.md,
-  };
+/**
+ * The floating "＋" on phone layouts. Positioned clear of the tab bar and the
+ * home indicator so it never covers the last row of a list.
+ */
+export function QuickAddButton() {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { compact } = useLayout();
+  const { open } = useQuickCapture();
+
+  if (!compact) return null;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Quick add a task or note"
+      onPress={open}
+      style={(state) => {
+        const { pressed, hovered, focused } = pressState(state);
+        return [
+          {
+            position: 'absolute' as const,
+            right: spacing.lg,
+            bottom: minTouchTarget + spacing.xl + insets.bottom,
+            width: layout.fabSize,
+            height: layout.fabSize,
+            borderRadius: radius.full,
+            backgroundColor: hovered ? theme.colors.primaryHover : theme.colors.primary,
+            alignItems: 'center' as const,
+            justifyContent: 'center' as const,
+            opacity: pressed ? 0.9 : 1,
+            transform: pressed ? [{ scale: 0.94 }] : undefined,
+            ...theme.elevation.lg,
+          },
+          transition(),
+          clickable(),
+          focusRing(theme.colors.focus, focused, 3),
+        ];
+      }}
+    >
+      <Ionicons name="add" size={28} color={theme.colors.primaryText} />
+    </Pressable>
+  );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -53,13 +54,15 @@ export default function HabitsScreen() {
 
   return (
     <Screen
+      width="wide"
       onRefresh={refetch}
       refreshing={habitsQuery.isRefetching}
       header={
         <ScreenHeader
+          eyebrow="Plan"
           title="Habits"
           subtitle="Check in for today, or tap any day in the last week to correct it."
-          action={<Button label="Add habit" size="sm" onPress={() => openSheet(null)} />}
+          action={<Button label="Add habit" size="sm" icon="add" onPress={() => openSheet(null)} />}
         />
       }
     >
@@ -69,22 +72,25 @@ export default function HabitsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : (habitsQuery.data?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="repeat-outline"
           title="No habits yet"
           description="Track something you want to do regularly. Streaks here are a plain counter — nothing is scored or shamed."
           actionLabel="Add habit"
           onAction={() => openSheet(null)}
         />
       ) : (
-        habitsQuery.data?.map((habit) => (
-          <HabitCard
-            key={habit.id}
-            habit={habit}
-            entries={entriesByHabit.get(habit.id) ?? []}
-            today={today}
-            onCheckIn={(date, count) => checkIn.mutate({ habitId: habit.id, date, count })}
-            onEdit={() => openSheet(habit)}
-          />
-        ))
+        <Grid minColumnWidth={320} maxColumns={2}>
+          {habitsQuery.data?.map((habit) => (
+            <HabitCard
+              key={habit.id}
+              habit={habit}
+              entries={entriesByHabit.get(habit.id) ?? []}
+              today={today}
+              onCheckIn={(date, count) => checkIn.mutate({ habitId: habit.id, date, count })}
+              onEdit={() => openSheet(habit)}
+            />
+          ))}
+        </Grid>
       )}
 
       <HabitFormSheet visible={sheetOpen} habit={editing} onClose={() => setSheetOpen(false)} />

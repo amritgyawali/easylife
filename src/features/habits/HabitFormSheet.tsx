@@ -3,12 +3,13 @@ import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/hooks/useTheme';
 import { minTouchTarget, radius, spacing } from '@/constants/theme';
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { toUserMessage } from '@/utils/errors';
+import { Field } from '@/components/forms/Field';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import {
   useCreateHabit,
   useDeleteHabit,
@@ -83,24 +84,22 @@ export function HabitFormSheet({ visible, onClose, habit }: HabitFormSheetProps)
     <FormSheet
       visible={visible}
       title={habit ? 'Edit habit' : 'New habit'}
+      subtitle="Streaks here are a plain counter — nothing is scored or shamed."
       onClose={onClose}
       footer={
-        <>
-          {habit ? (
-            <Button
-              label="Delete"
-              variant="danger"
-              disabled={pending}
-              onPress={async () => {
-                await deleteHabit.mutateAsync(habit.id);
-                onClose();
-              }}
-            />
-          ) : null}
-          <View style={{ flex: 1 }}>
-            <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
-          </View>
-        </>
+        <FormActions
+          pending={pending}
+          onSave={() => void handleSave()}
+          saveLabel={habit ? 'Save changes' : 'Add habit'}
+          onDelete={
+            habit
+              ? async () => {
+                  await deleteHabit.mutateAsync(habit.id);
+                  onClose();
+                }
+              : undefined
+          }
+        />
       }
     >
       <TextField
@@ -111,8 +110,10 @@ export function HabitFormSheet({ visible, onClose, habit }: HabitFormSheetProps)
           if (nameError) setNameError(null);
         }}
         error={nameError}
+        required
         placeholder="e.g. Morning walk"
         autoFocus
+        size="lg"
       />
 
       <TextField
@@ -123,14 +124,29 @@ export function HabitFormSheet({ visible, onClose, habit }: HabitFormSheetProps)
         multiline
       />
 
-      <OptionGroup label="Repeats" options={RECURRENCE_OPTIONS} value={recurrence} onChange={setRecurrence} />
+      <FormRow>
+        <OptionGroup
+          label="Repeats"
+          variant="segmented"
+          options={RECURRENCE_OPTIONS}
+          value={recurrence}
+          onChange={setRecurrence}
+        />
+        <TextField
+          label="Times per day"
+          value={targetCount}
+          onChangeText={setTargetCount}
+          keyboardType="number-pad"
+          helpText="How many check-ins count as done for one day."
+        />
+      </FormRow>
 
       {recurrence !== 'daily' ? (
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted">
-            On these days
-          </ThemedText>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        <Field
+          label="On these days"
+          helpText={weekdays.length === 0 ? 'Pick at least one day, or it counts as every day.' : undefined}
+        >
+          <View style={{ flexDirection: 'row', gap: spacing.xs }}>
             {WEEKDAYS.map((label, index) => {
               const selected = weekdays.includes(index);
               return (
@@ -144,40 +160,48 @@ export function HabitFormSheet({ visible, onClose, habit }: HabitFormSheetProps)
                       current.includes(index) ? current.filter((day) => day !== index) : [...current, index]
                     )
                   }
-                  style={{
-                    minWidth: minTouchTarget,
-                    minHeight: minTouchTarget,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: radius.full,
-                    borderWidth: 1,
-                    borderColor: selected ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: selected ? theme.colors.accentSurface : theme.colors.surface,
+                  style={(state) => {
+                    const { hovered, focused } = pressState(state);
+                    return [
+                      {
+                        flex: 1,
+                        minHeight: minTouchTarget,
+                        alignItems: 'center' as const,
+                        justifyContent: 'center' as const,
+                        borderRadius: radius.md,
+                        borderWidth: 1,
+                        borderColor: selected
+                          ? theme.colors.primary
+                          : hovered
+                            ? theme.colors.borderStrong
+                            : theme.colors.border,
+                        backgroundColor: selected
+                          ? theme.colors.primary
+                          : hovered
+                            ? theme.colors.surfaceHover
+                            : theme.colors.surface,
+                      },
+                      transition(),
+                      clickable(),
+                      focusRing(theme.colors.focus, focused),
+                    ];
                   }}
                 >
-                  <ThemedText variant="caption" tone={selected ? 'primary' : 'default'}>
-                    {label}
+                  <ThemedText
+                    variant="caption"
+                    weight={selected ? 'semibold' : 'regular'}
+                    tone={selected ? 'inverse' : 'muted'}
+                  >
+                    {label.charAt(0)}
                   </ThemedText>
                 </Pressable>
               );
             })}
           </View>
-        </View>
+        </Field>
       ) : null}
 
-      <TextField
-        label="Times per day"
-        value={targetCount}
-        onChangeText={setTargetCount}
-        keyboardType="number-pad"
-        helpText="How many check-ins count as done for one day."
-      />
-
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={error} />
     </FormSheet>
   );
 }

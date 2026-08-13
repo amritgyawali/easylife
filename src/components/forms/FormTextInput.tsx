@@ -1,67 +1,62 @@
-import { TextInput, View, type TextInputProps } from 'react-native';
+import { TextInput, type TextInputProps } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useTheme } from '@/hooks/useTheme';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { Field, inputChrome, useFieldFocus } from '@/components/forms/Field';
 
 export interface FormTextInputProps extends Omit<TextInputProps, 'style'> {
   name: string;
   label: string;
   helpText?: string;
+  required?: boolean;
+  size?: 'md' | 'lg';
 }
 
 /**
  * Standard text field wired to react-hook-form context. Renders the label,
  * the input, and — when present — a validation error, with the error
- * announced to screen readers (accessibilityLiveRegion) and the input
+ * announced to screen readers (via `Field`'s live region) and the input
  * marked invalid for assistive tech, satisfying "form-error announcements"
  * in the accessibility requirements.
  */
-export function FormTextInput({ name, label, helpText, ...inputProps }: FormTextInputProps) {
+export function FormTextInput({ name, label, helpText, required, size, ...inputProps }: FormTextInputProps) {
   const theme = useTheme();
   const { control } = useFormContext();
+  const focus = useFieldFocus();
 
   return (
     <Controller
       control={control}
       name={name}
       render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted" nativeID={`${name}-label`}>
-            {label}
-          </ThemedText>
+        <Field
+          label={label}
+          helpText={helpText}
+          required={required}
+          error={error?.message ?? null}
+          nativeID={`${name}-label`}
+        >
           <TextInput
             accessibilityLabelledBy={`${name}-label`}
             accessibilityState={{ disabled: inputProps.editable === false }}
             aria-invalid={Boolean(error)}
-            style={{
-              minHeight: minTouchTarget,
-              borderWidth: 1,
-              borderColor: error ? theme.colors.negative : theme.colors.border,
-              borderRadius: radius.md,
-              paddingHorizontal: spacing.md,
-              color: theme.colors.text,
-              backgroundColor: theme.colors.surface,
-              // Below 16px, iOS Safari zooms the whole page in on focus.
-              fontSize: fontSize.md,
-            }}
+            style={inputChrome(theme, {
+              focused: focus.focused,
+              invalid: Boolean(error),
+              disabled: inputProps.editable === false,
+              size,
+            })}
             placeholderTextColor={theme.colors.textMuted}
-            onBlur={onBlur}
+            onFocus={focus.onFocus}
+            onBlur={() => {
+              focus.onBlur();
+              onBlur();
+            }}
             onChangeText={onChange}
             value={typeof value === 'string' ? value : ''}
             {...inputProps}
           />
-          {error ? (
-            <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-              {error.message}
-            </ThemedText>
-          ) : helpText ? (
-            <ThemedText variant="caption" tone="muted">
-              {helpText}
-            </ThemedText>
-          ) : null}
-        </View>
+        </Field>
       )}
     />
   );

@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { spacing } from '@/constants/theme';
-import { FormSheet } from '@/components/ui/FormSheet';
 import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
+import { CheckboxField } from '@/components/forms/CheckboxField';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
-import { toUserMessage } from '@/utils/errors';
 import { fromMinorUnits } from '@/utils/money';
 import type { AccountType } from '@/types/database';
 import {
@@ -72,13 +70,20 @@ export function AccountFormSheet({ visible, onClose, account }: AccountFormSheet
     <FormSheet
       visible={visible}
       title={account ? 'Edit account' : 'New account'}
+      subtitle={
+        account
+          ? 'The balance stays derived from the ledger.'
+          : 'Cash, bank, wallet — anything you move money through.'
+      }
       onClose={onClose}
+      size="lg"
       footer={
         <>
           {account ? (
             <Button
               label="Archive"
               variant="secondary"
+              icon="archive-outline"
               disabled={pending}
               onPress={async () => {
                 await archiveAccount.mutateAsync(account.id);
@@ -87,7 +92,12 @@ export function AccountFormSheet({ visible, onClose, account }: AccountFormSheet
             />
           ) : null}
           <View style={{ flex: 1 }}>
-            <Button label="Save" loading={pending} fullWidth onPress={() => void handleSave()} />
+            <Button
+              label={account ? 'Save changes' : 'Add account'}
+              loading={pending}
+              fullWidth
+              onPress={() => void handleSave()}
+            />
           </View>
         </>
       }
@@ -100,8 +110,10 @@ export function AccountFormSheet({ visible, onClose, account }: AccountFormSheet
           if (nameError) setNameError(null);
         }}
         error={nameError}
+        required
         placeholder="e.g. NIC Asia savings"
         autoFocus
+        size="lg"
       />
 
       <OptionGroup
@@ -111,19 +123,21 @@ export function AccountFormSheet({ visible, onClose, account }: AccountFormSheet
         onChange={setAccountType}
       />
 
-      <OptionGroup
-        label="Currency"
-        options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-        value={currency}
-        onChange={setCurrency}
-      />
-
-      <MoneyField
-        label="Opening balance"
-        value={openingBalance}
-        onChangeText={setOpeningBalance}
-        currency={currency}
-      />
+      <FormRow>
+        <OptionGroup
+          label="Currency"
+          options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+          value={currency}
+          onChange={setCurrency}
+        />
+        <MoneyField
+          label="Opening balance"
+          value={openingBalance}
+          onChangeText={setOpeningBalance}
+          currency={currency}
+          helpText="What was in it when you started tracking."
+        />
+      </FormRow>
 
       <TextField
         label="Institution"
@@ -132,20 +146,14 @@ export function AccountFormSheet({ visible, onClose, account }: AccountFormSheet
         placeholder="Optional — bank, wallet or co-operative"
       />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Checkbox
-          checked={includeInNetWorth}
-          onChange={setIncludeInNetWorth}
-          accessibilityLabel="Include this account in net worth"
-        />
-        <ThemedText variant="body">Count towards net worth</ThemedText>
-      </View>
+      <CheckboxField
+        checked={includeInNetWorth}
+        onChange={setIncludeInNetWorth}
+        label="Count towards net worth"
+        description="Turn off for accounts that aren't really yours, like a shared household pot."
+      />
 
-      {error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={error} />
     </FormSheet>
   );
 }

@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
 
-import { FormSheet } from '@/components/ui/FormSheet';
-import { Button } from '@/components/ui/Button';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { FormActions, FormRow, FormSheet } from '@/components/ui/FormSheet';
+import { FormError, InlineMessage } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { DateField } from '@/components/forms/DateField';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
 import type { IsoDate } from '@/utils/date';
 import { useAccounts } from '@/features/finance/accounts-api';
 import { useCategories } from '@/features/finance/categories-api';
@@ -24,10 +21,10 @@ export interface TransactionFormSheetProps {
   defaultAccountId?: string | null;
 }
 
-const KIND_OPTIONS: { value: LedgerTransactionKind; label: string }[] = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' },
+const KIND_OPTIONS: { value: LedgerTransactionKind; label: string; icon: 'arrow-up' | 'arrow-down' | 'swap-horizontal' }[] = [
+  { value: 'expense', label: 'Expense', icon: 'arrow-up' },
+  { value: 'income', label: 'Income', icon: 'arrow-down' },
+  { value: 'transfer', label: 'Transfer', icon: 'swap-horizontal' },
 ];
 
 /**
@@ -141,19 +138,19 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
     <FormSheet
       visible={visible}
       title="New transaction"
+      subtitle="Posts a balanced pair of ledger entries."
       onClose={onClose}
+      size="lg"
       footer={
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Save"
-            loading={createTransaction.isPending}
-            fullWidth
-            onPress={() => void handleSave()}
-          />
-        </View>
+        <FormActions
+          pending={createTransaction.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Save transaction"
+        />
       }
     >
       <OptionGroup
+        variant="segmented"
         options={kindOptions}
         value={kind}
         onChange={(value) => {
@@ -163,13 +160,12 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
         }}
       />
       {!canTransfer ? (
-        <ThemedText variant="caption" tone="muted">
-          Add a second account to move money between accounts.
-        </ThemedText>
+        <InlineMessage message="Add a second account to move money between accounts." />
       ) : null}
 
       <MoneyField
         label="Amount"
+        required
         value={amount}
         onChangeText={(value) => {
           setAmount(value);
@@ -181,49 +177,39 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
       />
 
       {accountOptions.length === 0 ? (
-        <ThemedText variant="body" tone="negative">
-          Add an account before recording transactions.
-        </ThemedText>
+        <InlineMessage tone="negative" message="Add an account before recording transactions." />
       ) : (
         <OptionGroup
           label={kind === 'transfer' ? 'From' : 'Account'}
           options={accountOptions}
           value={accountId}
+          error={errors.account}
           onChange={(value) => {
             setAccountId(value);
             setErrors((current) => ({ ...current, account: undefined }));
           }}
         />
       )}
-      {errors.account ? (
-        <ThemedText variant="caption" tone="negative">
-          {errors.account}
-        </ThemedText>
-      ) : null}
 
       {kind === 'transfer' ? (
         <>
           {destinationOptions.length === 0 ? (
-            <ThemedText variant="body" tone="negative">
-              Choose a &quot;From&quot; account first, or add another account — there&apos;s nothing left to
-              transfer to.
-            </ThemedText>
+            <InlineMessage
+              tone="negative"
+              message={'Choose a "From" account first, or add another account — there\u2019s nothing left to transfer to.'}
+            />
           ) : (
             <OptionGroup
               label="To"
               options={destinationOptions}
               value={destinationAccountId}
+              error={errors.destination}
               onChange={(value) => {
                 setDestinationAccountId(value);
                 setErrors((current) => ({ ...current, destination: undefined }));
               }}
             />
           )}
-          {errors.destination ? (
-            <ThemedText variant="caption" tone="negative">
-              {errors.destination}
-            </ThemedText>
-          ) : null}
 
           {needsRate ? (
             <>
@@ -250,20 +236,22 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
         </>
       ) : null}
 
-      <DateField
-        label="Date"
-        value={date}
-        onChange={(value) => setDate(value ?? today)}
-        today={today}
-        clearable={false}
-      />
-
-      <TextField
-        label="Description"
-        value={description}
-        onChangeText={setDescription}
-        placeholder="What was it for?"
-      />
+      <FormRow>
+        <DateField
+          label="Date"
+          value={date}
+          onChange={(value) => setDate(value ?? today)}
+          today={today}
+          clearable={false}
+        />
+        <TextField
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="What was it for?"
+          helpText="Shown as the row's title in the list."
+        />
+      </FormRow>
 
       {kind !== 'transfer' && relevantCategories.length > 0 ? (
         <OptionGroup
@@ -292,11 +280,7 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
         />
       ) : null}
 
-      {createTransaction.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(createTransaction.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={createTransaction.error} />
     </FormSheet>
   );
 }

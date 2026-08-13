@@ -1,18 +1,26 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-import { spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { minTouchTarget, spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Card } from '@/components/ui/Card';
+import { List, ListRow } from '@/components/ui/List';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { Stat, StatRow } from '@/components/ui/Stat';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { clickable, focusRing, pressState, transition } from '@/utils/interaction';
 import { useToday } from '@/hooks/useToday';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { useProfile } from '@/features/auth/useProfile';
 import { formatInstantTime, formatIsoDate } from '@/utils/date';
 import { useTasks, useToggleTaskComplete, type TaskRow } from '@/features/tasks/api';
@@ -85,6 +93,10 @@ export default function TodayScreen() {
     [habitsQuery.data, today]
   );
 
+  const habitsDone = habitsDueToday.filter((habit) =>
+    isCompleted(entriesByDate.get(habit.id)?.get(today), habit.target_count)
+  ).length;
+
   const isLoading = tasksQuery.isLoading || eventsQuery.isLoading || habitsQuery.isLoading;
   const error = tasksQuery.error ?? eventsQuery.error ?? habitsQuery.error;
 
@@ -103,9 +115,16 @@ export default function TodayScreen() {
       refreshing={tasksQuery.isRefetching}
       header={
         <ScreenHeader
+          eyebrow={formatIsoDate(today)}
           title={firstName ? `Hello, ${firstName}` : 'Today'}
-          subtitle={formatIsoDate(today)}
-          action={<Button label="Add task" size="sm" onPress={() => setSheetOpen(true)} />}
+          subtitle={
+            dueToday.length === 0
+              ? 'Nothing due today.'
+              : `${dueToday.length} ${dueToday.length === 1 ? 'task' : 'tasks'} due`
+          }
+          action={
+            <Button label="Add task" size="sm" icon="add" onPress={() => setSheetOpen(true)} />
+          }
         />
       }
     >
@@ -115,47 +134,97 @@ export default function TodayScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : (
         <>
-          <Card style={{ flexDirection: 'row', gap: spacing.lg }}>
-            <Stat label="Due today" value={String(dueToday.length)} />
-            <Stat label="Completed" value={String(doneToday.length)} />
-            <Stat label="Events" value={String(todaysEvents.length)} />
+          <Card>
+            <StatRow>
+              <Stat label="Due today" value={String(dueToday.length)} icon="checkbox-outline" />
+              <Stat
+                label="Completed"
+                value={String(doneToday.length)}
+                tone="positive"
+                icon="checkmark-done-outline"
+              />
+              <Stat label="Events" value={String(todaysEvents.length)} icon="calendar-outline" />
+              {habitsDueToday.length > 0 ? (
+                <Stat
+                  label="Habits"
+                  value={`${habitsDone}/${habitsDueToday.length}`}
+                  icon="repeat-outline"
+                />
+              ) : null}
+            </StatRow>
           </Card>
 
           {todaysEvents.length > 0 ? (
-            <Section title="Agenda">
-              <Card padded={false}>
+            <View style={{ gap: spacing.sm }}>
+              <SectionHeader
+                title="Agenda"
+                count={todaysEvents.length}
+                action={
+                  <Button
+                    label="Calendar"
+                    size="sm"
+                    variant="ghost"
+                    icon="arrow-forward"
+                    iconPosition="trailing"
+                    onPress={() => router.push('/calendar')}
+                  />
+                }
+              />
+              <List>
                 {todaysEvents.map((event) => (
-                  <View key={event.id} style={{ padding: spacing.md, gap: spacing.xs }}>
-                    <ThemedText variant="body">{event.title}</ThemedText>
-                    <Badge
-                      label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
-                      tone="primary"
-                    />
-                  </View>
+                  <ListRow
+                    key={event.id}
+                    icon="calendar-outline"
+                    iconTone="primary"
+                    title={event.title}
+                    meta={
+                      <Badge
+                        icon={event.all_day ? 'sunny-outline' : 'time-outline'}
+                        label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
+                        tone="primary"
+                      />
+                    }
+                  />
                 ))}
-              </Card>
-            </Section>
+              </List>
+            </View>
           ) : null}
 
-          <Section
-            title="Tasks"
-            action={
-              <Button label="See all" size="sm" variant="ghost" onPress={() => router.push('/tasks')} />
-            }
-          >
+          <View style={{ gap: spacing.sm }}>
+            <SectionHeader
+              title="Tasks"
+              count={dueToday.length}
+              action={
+                <Button
+                  label="See all"
+                  size="sm"
+                  variant="ghost"
+                  icon="arrow-forward"
+                  iconPosition="trailing"
+                  onPress={() => router.push('/tasks')}
+                />
+              }
+            />
             {dueToday.length === 0 ? (
-              <Card>
-                <ThemedText variant="body" tone="muted">
-                  Nothing is due today.
-                </ThemedText>
-              </Card>
+              <EmptyState
+                icon="checkmark-done-outline"
+                title="Nothing due today"
+                description={
+                  doneToday.length > 0
+                    ? `You've already finished ${doneToday.length} today.`
+                    : 'Add something you want to get done.'
+                }
+                actionLabel="Add task"
+                onAction={() => setSheetOpen(true)}
+              />
             ) : (
-              <Card padded={false}>
+              <List>
                 {dueToday.map((task) => (
                   <TaskListItem
                     key={task.id}
                     task={task}
                     today={today}
+                    hideDueDate
                     onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
                     onPress={() => {
                       setEditing(task);
@@ -163,56 +232,46 @@ export default function TodayScreen() {
                     }}
                   />
                 ))}
-              </Card>
+              </List>
             )}
-          </Section>
+          </View>
 
           {habitsDueToday.length > 0 ? (
-            <Section
-              title="Habits"
-              action={
-                <Button label="See all" size="sm" variant="ghost" onPress={() => router.push('/habits')} />
-              }
-            >
-              <Card padded={false}>
+            <View style={{ gap: spacing.sm }}>
+              <SectionHeader
+                title="Habits"
+                count={`${habitsDone}/${habitsDueToday.length}`}
+                action={
+                  <Button
+                    label="See all"
+                    size="sm"
+                    variant="ghost"
+                    icon="arrow-forward"
+                    iconPosition="trailing"
+                    onPress={() => router.push('/habits')}
+                  />
+                }
+              />
+              <List>
                 {habitsDueToday.map((habit) => {
                   const done = isCompleted(entriesByDate.get(habit.id)?.get(today), habit.target_count);
                   return (
-                    <Pressable
+                    <HabitCheckRow
                       key={habit.id}
-                      onPress={() =>
+                      name={habit.name}
+                      done={done}
+                      onToggle={(checked) =>
                         checkIn.mutate({
                           habitId: habit.id,
                           date: today,
-                          count: done ? 0 : habit.target_count,
+                          count: checked ? habit.target_count : 0,
                         })
                       }
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        padding: spacing.md,
-                      }}
-                    >
-                      <Checkbox
-                        checked={done}
-                        accessibilityLabel={`Check in "${habit.name}" for today`}
-                        onChange={(checked) =>
-                          checkIn.mutate({
-                            habitId: habit.id,
-                            date: today,
-                            count: checked ? habit.target_count : 0,
-                          })
-                        }
-                      />
-                      <ThemedText variant="body" tone={done ? 'muted' : 'default'}>
-                        {habit.name}
-                      </ThemedText>
-                    </Pressable>
+                    />
                   );
                 })}
-              </Card>
-            </Section>
+              </List>
+            </View>
           ) : null}
         </>
       )}
@@ -230,36 +289,58 @@ export default function TodayScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="title">{value}</ThemedText>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-    </View>
-  );
-}
-
-function Section({
-  title,
-  action,
-  children,
+/**
+ * A habit check-in row. The whole row toggles — on a phone, aiming for a 22px
+ * box to tick off "drink water" is needless precision.
+ */
+function HabitCheckRow({
+  name,
+  done,
+  onToggle,
 }: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  name: string;
+  done: boolean;
+  onToggle: (checked: boolean) => void;
 }) {
+  const theme = useTheme();
+  const compact = useCompactLayout();
+
   return (
-    <View style={{ gap: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-          {title.toUpperCase()}
-        </ThemedText>
-        <View style={{ flex: 1 }} />
-        {action}
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: done }}
+      accessibilityLabel={`Check in "${name}" for today`}
+      onPress={() => onToggle(!done)}
+      style={(state) => {
+        const { pressed, hovered, focused } = pressState(state);
+        return [
+          {
+            flexDirection: 'row' as const,
+            alignItems: 'center' as const,
+            gap: spacing.sm,
+            minHeight: minTouchTarget + spacing.sm,
+            paddingHorizontal: compact ? spacing.sm : spacing.md,
+            paddingRight: compact ? spacing.md : spacing.lg,
+            backgroundColor: pressed || hovered ? theme.colors.surfaceHover : 'transparent',
+          },
+          transition(),
+          clickable(),
+          focusRing(theme.colors.focus, focused, -2),
+        ];
+      }}
+    >
+      <View pointerEvents="none">
+        <Checkbox checked={done} onChange={onToggle} accessibilityLabel={name} />
       </View>
-      {children}
-    </View>
+      <ThemedText
+        variant="body"
+        weight="medium"
+        tone={done ? 'muted' : 'default'}
+        style={[{ flex: 1 }, done ? { textDecorationLine: 'line-through' } : null]}
+      >
+        {name}
+      </ThemedText>
+      {done ? <Ionicons name="flame" size={16} color={theme.colors.positive} /> : null}
+    </Pressable>
   );
 }

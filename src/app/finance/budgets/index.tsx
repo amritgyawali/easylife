@@ -2,25 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { useTheme } from '@/hooks/useTheme';
-import { radius, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
+import { Grid } from '@/components/layout/Grid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { Stat, StatRow } from '@/components/ui/Stat';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Checkbox } from '@/components/ui/Checkbox';
+import { CheckboxField } from '@/components/forms/CheckboxField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { IconButton } from '@/components/ui/IconButton';
-import { FormSheet } from '@/components/ui/FormSheet';
+import { FormActions, FormSheet } from '@/components/ui/FormSheet';
+import { FormError, InlineMessage } from '@/components/ui/InlineMessage';
 import { TextField } from '@/components/forms/TextField';
 import { MoneyField } from '@/components/forms/MoneyField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useToday } from '@/hooks/useToday';
-import { toUserMessage } from '@/utils/errors';
+import { clickable } from '@/utils/interaction';
 import { formatMoney, fromMinorUnits } from '@/utils/money';
 import type { IsoDate } from '@/utils/date';
 import type { BudgetPeriod } from '@/types/database';
@@ -73,11 +76,13 @@ export default function BudgetsScreen() {
     <Screen
       onRefresh={refetch}
       refreshing={isRefetching}
+      width="wide"
       header={
         <ScreenHeader
+          eyebrow="Money"
           title="Budgets"
           subtitle="Set a spending limit per category and watch it fill up as you spend."
-          action={<Button label="New budget" size="sm" onPress={() => setFormOpen(true)} />}
+          action={<Button label="New budget" size="sm" icon="add" onPress={() => setFormOpen(true)} />}
         />
       }
     >
@@ -87,13 +92,15 @@ export default function BudgetsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : budgets.length === 0 ? (
         <EmptyState
+          icon="pie-chart-outline"
           title="No budgets yet"
           description="Plan how much to spend per category for a month or year, then track it as you go."
           actionLabel="New budget"
           onAction={() => setFormOpen(true)}
         />
       ) : (
-        budgets.map(({ budget, itemProgress, totals }) => (
+        <Grid minColumnWidth={380} maxColumns={2}>
+        {budgets.map(({ budget, itemProgress, totals }) => (
           <BudgetCard
             key={budget.id}
             budget={budget}
@@ -115,7 +122,8 @@ export default function BudgetsScreen() {
               )
             }
           />
-        ))
+        ))}
+        </Grid>
       )}
 
       <BudgetFormSheet visible={formOpen} onClose={() => setFormOpen(false)} existingBudgets={budgets} />
@@ -131,19 +139,6 @@ export default function BudgetsScreen() {
         onClose={() => setItemSheet(null)}
       />
     </Screen>
-  );
-}
-
-function Total({ label, value, tone }: { label: string; value: string; tone?: 'positive' | 'negative' }) {
-  return (
-    <View style={{ gap: spacing.xxs }}>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-      <ThemedText variant="body" weight="semibold" tone={tone}>
-        {value}
-      </ThemedText>
-    </View>
   );
 }
 
@@ -174,7 +169,7 @@ function BudgetCard({
   const isOver = totals.remainingMinor < 0;
 
   return (
-    <Card style={{ gap: spacing.md }}>
+    <Card style={{ gap: spacing.md, height: '100%' }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
         <View style={{ flex: 1, gap: spacing.xxs }}>
           <ThemedText variant="subtitle">{budget.name}</ThemedText>
@@ -183,23 +178,28 @@ function BudgetCard({
             {budget.rollover_enabled ? ' · rolls over' : ''}
           </ThemedText>
         </View>
-        <IconButton icon="trash-outline" accessibilityLabel={`Delete ${budget.name}`} onPress={onDelete} />
+        <IconButton
+          icon="trash-outline"
+          tone="negative"
+          accessibilityLabel={`Delete ${budget.name}`}
+          onPress={onDelete}
+        />
       </View>
 
       {itemProgress.length > 0 ? (
-        <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-          <Total label="Planned" value={formatMoney(totals.plannedMinor, budget.currency)} />
-          <Total
+        <StatRow>
+          <Stat label="Planned" value={formatMoney(totals.plannedMinor, budget.currency)} />
+          <Stat
             label="Spent"
             value={formatMoney(totals.spentMinor, budget.currency)}
-            tone={isOver ? 'negative' : undefined}
+            tone={isOver ? 'negative' : 'default'}
           />
-          <Total
+          <Stat
             label={isOver ? 'Over by' : 'Left'}
             value={formatMoney(Math.abs(totals.remainingMinor), budget.currency)}
             tone={isOver ? 'negative' : 'positive'}
           />
-        </View>
+        </StatRow>
       ) : null}
 
       {itemProgress.length === 0 ? (
@@ -207,7 +207,7 @@ function BudgetCard({
           No categories yet — add one to start tracking.
         </ThemedText>
       ) : (
-        <View style={{ gap: spacing.md }}>
+        <View style={{ gap: spacing.lg }}>
           {itemProgress.map((entry) => (
             <BudgetItemBar
               key={entry.item.id}
@@ -221,8 +221,16 @@ function BudgetCard({
         </View>
       )}
 
+      <View style={{ flex: 1 }} />
+
       {hasCategories ? (
-        <Button label="Add category" variant="secondary" size="sm" onPress={onAddCategory} />
+        <Button
+          label="Add category"
+          variant="secondary"
+          size="sm"
+          icon="add"
+          onPress={onAddCategory}
+        />
       ) : (
         <View style={{ gap: spacing.xs }}>
           <ThemedText variant="caption" tone="muted">
@@ -248,10 +256,8 @@ function BudgetItemBar({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const theme = useTheme();
   const isOver = entry.remainingMinor < 0;
   const displayPercent = Math.round(entry.progress * 100);
-  const barPercent = Math.min(displayPercent, 100);
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -260,32 +266,30 @@ function BudgetItemBar({
           accessibilityRole="button"
           accessibilityLabel={`Edit ${label} budget, ${displayPercent} percent used`}
           onPress={onEdit}
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+          style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, clickable()]}
         >
-          <ThemedText variant="body" style={{ flex: 1 }} numberOfLines={1}>
+          <ThemedText variant="label" weight="medium" style={{ flex: 1 }} numberOfLines={1}>
             {label}
           </ThemedText>
-          <ThemedText variant="caption" tone={isOver ? 'negative' : 'muted'}>
+          <ThemedText variant="caption" tone={isOver ? 'negative' : 'muted'} numeric>
             {formatMoney(entry.spentMinor, currency, { showCurrency: false })} /{' '}
             {formatMoney(entry.availableMinor, currency, { showCurrency: false })}
           </ThemedText>
         </Pressable>
         <IconButton
           icon="close-circle-outline"
+          control="sm"
+          size={18}
           accessibilityLabel={`Remove ${label} from this budget`}
           onPress={onDelete}
         />
       </View>
-      <View style={{ height: 6, borderRadius: radius.full, backgroundColor: theme.colors.surfaceAlt }}>
-        <View
-          style={{
-            height: 6,
-            width: `${Math.max(barPercent, entry.spentMinor > 0 ? 2 : 0)}%`,
-            borderRadius: radius.full,
-            backgroundColor: isOver ? theme.colors.negative : theme.colors.primary,
-          }}
-        />
-      </View>
+      <ProgressBar
+        value={entry.progress}
+        height={6}
+        tone={isOver ? 'negative' : entry.progress > 0.85 ? 'warning' : 'primary'}
+        accessibilityLabel={`${label}, ${displayPercent} percent of budget used`}
+      />
       {isOver ? (
         <ThemedText variant="caption" tone="negative">
           {displayPercent}% used — over by {formatMoney(Math.abs(entry.remainingMinor), currency)}
@@ -375,15 +379,25 @@ function BudgetFormSheet({
     <FormSheet
       visible={visible}
       title="New budget"
+      subtitle="Plan a period, then give each category an amount."
       onClose={onClose}
       footer={
-        <View style={{ flex: 1 }}>
-          <Button label="Save" loading={createBudget.isPending} fullWidth onPress={() => void handleSave()} />
-        </View>
+        <FormActions
+          pending={createBudget.isPending}
+          onSave={() => void handleSave()}
+          saveLabel="Create budget"
+        />
       }
     >
-      <OptionGroup label="Period" options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
       <OptionGroup
+        label="Period"
+        variant="segmented"
+        options={PERIOD_OPTIONS}
+        value={period}
+        onChange={setPeriod}
+      />
+      <OptionGroup
+        variant="segmented"
         options={
           period === 'monthly'
             ? [
@@ -417,36 +431,27 @@ function BudgetFormSheet({
         onChange={setCurrency}
       />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Checkbox
-          checked={rolloverEnabled}
-          onChange={setRolloverEnabled}
-          accessibilityLabel="Roll unused money into the next period"
-        />
-        <ThemedText variant="body" style={{ flex: 1 }}>
-          Roll unused money into the next period
-        </ThemedText>
-      </View>
+      <CheckboxField
+        checked={rolloverEnabled}
+        onChange={setRolloverEnabled}
+        label="Roll unused money into the next period"
+        description="Anything you don't spend is added to the same category next time."
+      />
 
       {previousBudget ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-          <Checkbox
-            checked={copyFrom}
-            onChange={setCopyFrom}
-            accessibilityLabel={`Start from ${previousBudget.name}'s categories`}
-          />
-          <ThemedText variant="body" style={{ flex: 1 }}>
-            Start from &quot;{previousBudget.name}&quot;&apos;s categories
-            {rolloverEnabled ? ', carrying over what\'s unspent' : ''}
-          </ThemedText>
-        </View>
+        <CheckboxField
+          checked={copyFrom}
+          onChange={setCopyFrom}
+          label={`Start from "${previousBudget.name}"'s categories`}
+          description={
+            rolloverEnabled
+              ? "Copies the same categories and amounts, carrying over what's unspent."
+              : 'Copies the same categories and amounts.'
+          }
+        />
       ) : null}
 
-      {createBudget.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(createBudget.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={createBudget.error} />
     </FormSheet>
   );
 }
@@ -514,38 +519,26 @@ function BudgetItemFormSheet({
     <FormSheet
       visible={visible}
       title={item ? 'Edit category budget' : 'Add a category'}
+      subtitle={budget.name}
       onClose={onClose}
       footer={
-        <View style={{ flex: 1 }}>
-          <Button
-            label="Save"
-            loading={saveBudgetItem.isPending}
-            fullWidth
-            onPress={() => void handleSave()}
-          />
-        </View>
+        <FormActions pending={saveBudgetItem.isPending} onSave={() => void handleSave()} />
       }
     >
       {availableCategories.length === 0 ? (
-        <ThemedText variant="body" tone="negative">
-          Every expense category is already on this budget.
-        </ThemedText>
+        <InlineMessage tone="warning" message="Every expense category is already on this budget." />
       ) : (
         <OptionGroup
           label="Category"
           options={availableCategories.map((category) => ({ value: category.id, label: category.name }))}
           value={categoryId}
+          error={errors.category}
           onChange={(value) => {
             setCategoryId(value);
             setErrors((current) => ({ ...current, category: undefined }));
           }}
         />
       )}
-      {errors.category ? (
-        <ThemedText variant="caption" tone="negative">
-          {errors.category}
-        </ThemedText>
-      ) : null}
 
       <MoneyField
         label="Planned amount"
@@ -559,11 +552,7 @@ function BudgetItemFormSheet({
         autoFocus
       />
 
-      {saveBudgetItem.error ? (
-        <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-          {toUserMessage(saveBudgetItem.error)}
-        </ThemedText>
-      ) : null}
+      <FormError error={saveBudgetItem.error} />
     </FormSheet>
   );
 }

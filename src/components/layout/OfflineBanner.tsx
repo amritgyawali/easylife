@@ -1,8 +1,9 @@
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useTheme } from '@/hooks/useTheme';
+import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useIsOnline, usePendingSyncCount } from '@/services/offline/online-manager';
@@ -20,6 +21,7 @@ import { useOutboxCount } from '@/services/offline/outbox-store';
  */
 export function OfflineBanner() {
   const theme = useTheme();
+  const compact = useCompactLayout();
   const online = useIsOnline();
   const queryClient = useQueryClient();
   // Both queued write paths: durable outbox entries (quick-add) and TanStack's
@@ -29,14 +31,18 @@ export function OfflineBanner() {
   if (online && pending === 0) return null;
 
   const offline = !online;
-  const background = offline ? theme.colors.warningSurface : theme.colors.accentSurface;
-  const tone = offline ? 'warning' : 'primary';
-  const icon = offline ? 'cloud-offline-outline' : 'sync-outline';
+  const accent = offline ? theme.colors.warning : theme.colors.primary;
 
+  // On a phone the banner sits above every screen, so it stays to one short
+  // line; the full explanation is only shown where there is room for it.
   const message = offline
     ? pending > 0
-      ? `Offline — ${pending} ${pending === 1 ? 'change' : 'changes'} saved here, will sync when you reconnect`
-      : 'Offline — your changes are saved on this device and will sync when you reconnect'
+      ? compact
+        ? `Offline · ${pending} saved here`
+        : `Offline — ${pending} ${pending === 1 ? 'change' : 'changes'} saved on this device, syncing when you reconnect`
+      : compact
+        ? 'Offline · saved on this device'
+        : 'Offline — your changes are saved on this device and will sync when you reconnect'
     : `Syncing ${pending} ${pending === 1 ? 'change' : 'changes'}…`;
 
   return (
@@ -46,14 +52,26 @@ export function OfflineBanner() {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: spacing.sm,
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
-        backgroundColor: background,
+        backgroundColor: offline ? theme.colors.warningSurface : theme.colors.accentSurface,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
       }}
     >
-      <Ionicons name={icon} size={16} color={theme.colors[offline ? 'warning' : 'primary']} />
-      <ThemedText variant="caption" tone={tone} weight="medium" style={{ flex: 1 }}>
+      {offline ? (
+        <Ionicons name="cloud-offline-outline" size={15} color={accent} />
+      ) : (
+        <ActivityIndicator size="small" color={accent} />
+      )}
+      <ThemedText
+        variant="caption"
+        tone={offline ? 'warning' : 'primary'}
+        weight="medium"
+        numberOfLines={1}
+      >
         {message}
       </ThemedText>
     </View>

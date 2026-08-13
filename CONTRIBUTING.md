@@ -32,9 +32,14 @@ supabase/
 
 tests/
 ├── unit/               # Jest — pure logic (utils/, services/ business logic)
+├── fixtures/           # Real files the parsers are tested against (see below)
 ├── integration/        # Jest — repository/query behavior against a local Supabase (Phase 6+)
 └── e2e/                 # Playwright (web) / Maestro (mobile)
 ```
+
+### Document fixtures
+
+`tests/fixtures/documents/` holds small, real `.docx`/`.xlsx`/`.pptx`/`.odt`/`.ods`/`.epub`/`.zip` files and raw DEFLATE streams, all produced by Python's `zipfile`/`zlib`. The Reader's parsers (`src/features/documents/viewer/`) are tested against them rather than against hand-made stand-ins, so the decompressor, the ZIP reader and each format parser are exercised on bytes a real writer produced. Add to them by extending the generator rather than editing a binary by hand.
 
 ## Coding rules
 

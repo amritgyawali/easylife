@@ -23,7 +23,7 @@ import { useFilePicker } from '@/features/documents/use-file-picker';
 import { UploadSheet } from '@/features/documents/UploadSheet';
 import { DocumentViewer } from '@/features/documents/viewer/DocumentViewer';
 import { FileDropZone } from '@/features/documents/viewer/FileDropZone';
-import { resolveViewerKind, viewerKindIcon } from '@/features/documents/viewer/file-kinds';
+import { fileFormatIcon, resolveFileFormat, viewerKindOf } from '@/features/documents/viewer/file-kinds';
 import { releaseReaderSource, type ReaderSource } from '@/features/documents/viewer/reader-source';
 
 /** Width of the library rail on desktop — wide enough for a real file name. */
@@ -277,8 +277,9 @@ export default function ReaderScreen() {
  * answer instead of always on "statement". The user can still change it.
  */
 function suggestDocumentType(file: PickedFile): DocumentType {
-  switch (resolveViewerKind({ name: file.name, mimeType: file.mimeType })) {
+  switch (viewerKindOf(resolveFileFormat({ name: file.name, mimeType: file.mimeType }))) {
     case 'delimited':
+    case 'sheet':
       return 'bank_statement';
     case 'image':
       return 'receipt';
@@ -297,7 +298,7 @@ function LibraryRow({
   onPress: () => void;
 }) {
   const theme = useTheme();
-  const kind = resolveViewerKind({ name: document.storage_path, mimeType: document.mime_type });
+  const format = resolveFileFormat({ name: document.storage_path, mimeType: document.mime_type });
 
   return (
     <Pressable
@@ -321,7 +322,7 @@ function LibraryRow({
       })}
     >
       <Ionicons
-        name={viewerKindIcon(kind)}
+        name={fileFormatIcon(format)}
         size={20}
         color={selected ? theme.colors.primary : theme.colors.textMuted}
       />

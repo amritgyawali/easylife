@@ -12,13 +12,29 @@ import type { PickedFile } from '@/features/documents/api';
  * and both differ again on web; funnelling them through `PickedFile` here
  * keeps that mess out of the screens and out of the upload path.
  */
-/** File types the import/upload paths know what to do with. */
+/**
+ * File types the vault offers by default — everything the Reader can open in
+ * the app, which is a superset of what the import pipeline can parse.
+ *
+ * Kept as a list rather than `*​/*` so the picker opens on the useful files;
+ * the Reader passes `anyType` when the user explicitly wants anything.
+ */
 export const IMPORTABLE_MIME_TYPES = [
-  'text/csv',
-  'text/plain',
-  'text/comma-separated-values',
+  'text/*',
   'application/pdf',
   'image/*',
+  'audio/*',
+  'video/*',
+  'application/json',
+  'application/rtf',
+  'application/zip',
+  'application/epub+zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
 ];
 
 export interface PickDocumentOptions {

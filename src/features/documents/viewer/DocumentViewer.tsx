@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Platform, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
@@ -11,24 +11,28 @@ import { IconButton } from '@/components/ui/IconButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { toUserMessage } from '@/utils/errors';
-import { parseDelimited } from '@/features/imports/delimited';
+import { formatFileSize } from '@/utils/bytes';
 import { signedUrlFor } from '@/features/documents/api';
-import { viewerKindIcon, viewerKindLabel } from '@/features/documents/viewer/file-kinds';
+import { fileFormatIcon, fileFormatLabel } from '@/features/documents/viewer/file-kinds';
 import { describeReaderSource, type ReaderSource } from '@/features/documents/viewer/reader-source';
 import { READER_URL_TTL_SECONDS, useReaderContent } from '@/features/documents/viewer/use-reader-content';
+import { findMatchingLines } from '@/features/documents/viewer/text-preview';
 import {
-  decodeTextPreview,
-  findMatchingLines,
-  findMatchingRows,
-} from '@/features/documents/viewer/text-preview';
+  gridSearchTargets,
+  parseDocumentBytes,
+  richSearchTargets,
+  type ParsedDocument,
+} from '@/features/documents/viewer/parse-document';
+import { parseErrorDetail } from '@/features/documents/viewer/parse-error';
 import { clampZoom, ZOOM_STEP } from '@/features/documents/viewer/typography';
 import { useFullscreen } from '@/features/documents/viewer/use-fullscreen';
 import { InlineFrame } from '@/features/documents/viewer/InlineFrame';
 import { ImageDocumentView } from '@/features/documents/viewer/ImageDocumentView';
-import { TableDocumentView } from '@/features/documents/viewer/TableDocumentView';
+import { MediaDocumentView } from '@/features/documents/viewer/MediaDocumentView';
+import { GridDocumentView } from '@/features/documents/viewer/GridDocumentView';
+import { RichDocumentView } from '@/features/documents/viewer/RichDocumentView';
 import { TextDocumentView } from '@/features/documents/viewer/TextDocumentView';
 import { ViewerFallbackCard } from '@/features/documents/viewer/ViewerFallbackCard';
-import { formatFileSize } from '@/utils/bytes';
 
 export interface DocumentViewerProps {
   source: ReaderSource;
@@ -38,16 +42,18 @@ export interface DocumentViewerProps {
   actions?: ReactNode;
 }
 
-type DelimitedView = 'table' | 'text';
+/** Parsing either produced something to read, or an explanation of why not. */
+type ParseResult = { ok: true; value: ParsedDocument } | { ok: false; error: unknown };
 
 /**
  * Reads a document in place — no download, no external app.
  *
- * The viewer is one component per format (`ImageDocumentView`,
- * `TableDocumentView`, `TextDocumentView`, and the browser's own frame for
- * PDFs) behind a single toolbar, so zoom, search and rotation mean the same
- * thing whatever is open, and a new format is a new view rather than another
- * branch in here.
+ * Everything below the toolbar is one of four views (formatted document, grid,
+ * text, or the platform's own renderer for PDFs, images and media), chosen by
+ * what `parseDocumentBytes` produced. That is what lets a Word file, a
+ * spreadsheet, an EPUB and a CSV share one set of controls: zoom, find,
+ * rotate, full screen and hand-off mean the same thing whatever is open, and
+ * supporting a new format is a parser plus a line in the dispatcher.
  */
 export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps) {
   const theme = useTheme();
@@ -61,46 +67,88 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [wrap, setWrap] = useState(compact);
-  const [delimitedView, setDelimitedView] = useState<DelimitedView>('table');
+  const [asPlainText, setAsPlainText] = useState(false);
+  const [sheetIndex, setSheetIndex] = useState(0);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [activeMatch, setActiveMatch] = useState(-1);
   const [openError, setOpenError] = useState<string | null>(null);
 
-  // A new document starts fresh: carrying the previous file's zoom, rotation
-  // or search over to the next one is never what was meant.
+  // A new document starts fresh: carrying the previous file's zoom, rotation,
+  // sheet or search over to the next one is never what was meant.
   useEffect(() => {
     setZoom(1);
     setRotation(0);
-    setDelimitedView('table');
+    setAsPlainText(false);
+    setSheetIndex(0);
     setSearching(false);
     setQuery('');
     setActiveMatch(-1);
     setOpenError(null);
   }, [meta.key]);
 
-  const preview = useMemo(() => (content?.bytes ? decodeTextPreview(content.bytes) : null), [content?.bytes]);
+  /**
+   * Parsing runs in a memo rather than an effect so the first paint after the
+   * bytes arrive already has the document — a spinner that flashes for one
+   * frame is worse than none. Formats that need real work (a Word file, a
+   * workbook) are the reason it is memoised on the bytes.
+   */
+  const parsed = useMemo<ParseResult | null>(() => {
+    if (!content?.bytes) return null;
 
-  const table = useMemo(
-    () => (preview && meta.kind === 'delimited' ? parseDelimited(preview.text) : null),
-    [preview, meta.kind]
+    try {
+      return {
+        ok: true,
+        value: parseDocumentBytes({
+          bytes: content.bytes,
+          fileName: meta.fileName,
+          mimeType: meta.mimeType,
+          format: meta.format,
+        }),
+      };
+    } catch (failure) {
+      return { ok: false, error: failure };
+    }
+  }, [content?.bytes, meta.fileName, meta.mimeType, meta.format]);
+
+  const document = parsed?.ok ? parsed.value : null;
+
+  const grids = document?.presentation === 'grids' ? document.grids : null;
+  const activeGrid =
+    document?.presentation === 'delimited' && !asPlainText
+      ? document.grid
+      : (grids?.[Math.min(sheetIndex, grids.length - 1)] ?? null);
+
+  const textLines =
+    document?.presentation === 'text'
+      ? document.preview.lines
+      : document?.presentation === 'delimited' && asPlainText
+        ? document.preview.lines
+        : null;
+
+  const searchTargets = useMemo(() => {
+    if (document?.presentation === 'rich') return richSearchTargets(document.document);
+    if (activeGrid) return gridSearchTargets(activeGrid);
+    return textLines;
+  }, [document, activeGrid, textLines]);
+
+  const matches = useMemo(
+    () => (query.trim() && searchTargets ? findMatchingLines(searchTargets, query) : []),
+    [query, searchTargets]
   );
-
-  const showingTable = meta.kind === 'delimited' && delimitedView === 'table' && table !== null;
-
-  const matches = useMemo(() => {
-    if (!query.trim()) return [];
-    if (showingTable && table) return findMatchingRows(table.rows, query);
-    if (preview) return findMatchingLines(preview.lines, query);
-    return [];
-  }, [query, showingTable, table, preview]);
 
   useEffect(() => {
     setActiveMatch(matches.length > 0 ? 0 : -1);
   }, [matches]);
 
-  const searchable = preview !== null && !preview.binary;
-  const zoomable = meta.kind !== 'pdf' && meta.kind !== 'unsupported';
+  // Changing sheet or view mode invalidates the row indices a match refers to.
+  useEffect(() => {
+    setActiveMatch(-1);
+  }, [sheetIndex, asPlainText]);
+
+  const searchable = Boolean(searchTargets);
+  const zoomable = meta.kind !== 'pdf' && meta.kind !== 'media' && Boolean(document ?? content?.displayUrl);
+  const truncated = document?.presentation === 'text' || document?.presentation === 'delimited';
 
   const openExternally = useCallback(async () => {
     setOpenError(null);
@@ -148,18 +196,19 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
             <IconButton icon="arrow-back" accessibilityLabel="Close document" onPress={onClose} />
           ) : null}
 
-          <Ionicons name={viewerKindIcon(meta.kind)} size={20} color={theme.colors.textMuted} />
+          <Ionicons name={fileFormatIcon(meta.format)} size={20} color={theme.colors.textMuted} />
 
           <View style={{ flex: 1, gap: spacing.xxs }}>
             <ThemedText variant="subtitle" numberOfLines={1}>
               {meta.title}
             </ThemedText>
             <ThemedText variant="caption" tone="muted" numberOfLines={1}>
+              {document?.presentation === 'rich' ? `${document.document.summary} · ` : ''}
               {meta.subtitle}
             </ThemedText>
           </View>
 
-          {!compact ? <Badge label={viewerKindLabel(meta.kind)} /> : null}
+          {!compact ? <Badge label={fileFormatLabel(meta.format)} /> : null}
           {actions}
         </View>
 
@@ -176,15 +225,15 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
             />
           ) : null}
 
-          {meta.kind === 'delimited' && table ? (
+          {document?.presentation === 'delimited' ? (
             <IconButton
-              icon={delimitedView === 'table' ? 'text-outline' : 'grid-outline'}
-              accessibilityLabel={delimitedView === 'table' ? 'Show as plain text' : 'Show as a table'}
-              onPress={() => setDelimitedView((mode) => (mode === 'table' ? 'text' : 'table'))}
+              icon={asPlainText ? 'grid-outline' : 'text-outline'}
+              accessibilityLabel={asPlainText ? 'Show as a table' : 'Show as plain text'}
+              onPress={() => setAsPlainText((current) => !current)}
             />
           ) : null}
 
-          {preview && !showingTable ? (
+          {textLines ? (
             <IconButton
               icon={wrap ? 'return-down-forward-outline' : 'remove-outline'}
               accessibilityLabel={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'}
@@ -241,6 +290,14 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
           />
         </View>
 
+        {grids && grids.length > 1 ? (
+          <SheetTabs
+            names={grids.map((grid) => grid.name)}
+            selected={Math.min(sheetIndex, grids.length - 1)}
+            onSelect={setSheetIndex}
+          />
+        ) : null}
+
         {searching && searchable ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <View style={{ flex: 1 }}>
@@ -248,7 +305,7 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
                 value={query}
                 onChangeText={setQuery}
                 autoFocus
-                placeholder={showingTable ? 'Find in rows' : 'Find in text'}
+                placeholder={activeGrid ? 'Find in rows' : 'Find in document'}
                 accessibilityLabel="Find in document"
               />
             </View>
@@ -276,10 +333,10 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
           </ThemedText>
         ) : null}
 
-        {preview?.truncated ? (
+        {truncated && document.preview.truncated ? (
           <ThemedText variant="caption" tone="warning">
             Showing the first {formatFileSize(content?.bytes?.length ?? 0)} of this file —{' '}
-            {formatFileSize(preview.omittedBytes)} more isn&apos;t displayed.
+            {formatFileSize(document.preview.omittedBytes)} more isn&apos;t displayed.
           </ThemedText>
         ) : null}
       </View>
@@ -293,20 +350,46 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
             </ThemedText>
           </View>
         ) : error ? (
-          <ErrorState error={error} onRetry={reload} />
-        ) : (
-          <DocumentBody
-            kind={meta.kind}
-            title={meta.title}
-            displayUrl={content?.displayUrl ?? null}
-            preview={preview}
-            table={showingTable ? table : null}
+          <ErrorState error={error} onRetry={reload} description={parseErrorDetail(error) ?? undefined} />
+        ) : parsed && !parsed.ok ? (
+          <ViewerFallbackCard
+            title="This file couldn't be read here"
+            description={parseErrorDetail(parsed.error) ?? toUserMessage(parsed.error)}
+            onOpenExternally={() => void openExternally()}
+          />
+        ) : activeGrid ? (
+          <GridDocumentView
+            grid={activeGrid}
             query={query}
             matches={matches}
             activeMatch={activeMatch}
             zoom={zoom}
-            rotation={rotation}
+          />
+        ) : document?.presentation === 'rich' ? (
+          <RichDocumentView
+            document={document.document}
+            query={query}
+            matches={matches}
+            activeMatch={activeMatch}
+            zoom={zoom}
+          />
+        ) : textLines ? (
+          <TextDocumentView
+            lines={textLines}
+            query={query}
+            matches={matches}
+            activeMatch={activeMatch}
+            zoom={zoom}
             wrap={wrap}
+          />
+        ) : (
+          <PlatformRenderedBody
+            kind={meta.kind}
+            format={meta.format}
+            title={meta.title}
+            displayUrl={content?.displayUrl ?? null}
+            zoom={zoom}
+            rotation={rotation}
             onOpenExternally={() => void openExternally()}
           />
         )}
@@ -315,70 +398,71 @@ export function DocumentViewer({ source, onClose, actions }: DocumentViewerProps
   );
 }
 
-interface DocumentBodyProps {
+/** Worksheet switcher for a workbook with more than one sheet. */
+function SheetTabs({
+  names,
+  selected,
+  onSelect,
+}: {
+  names: string[];
+  selected: number;
+  onSelect: (index: number) => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs }}>
+      {names.map((name, index) => {
+        const active = index === selected;
+
+        return (
+          <Pressable
+            key={`${name}-${index}`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`Sheet ${name}`}
+            onPress={() => onSelect(index)}
+            style={{
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: radius.full,
+              backgroundColor: active ? theme.colors.accentSurface : theme.colors.surfaceAlt,
+            }}
+          >
+            <ThemedText
+              variant="caption"
+              tone={active ? 'primary' : 'muted'}
+              weight={active ? 'semibold' : 'regular'}
+            >
+              {name}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+interface PlatformRenderedBodyProps {
   kind: ReturnType<typeof describeReaderSource>['kind'];
+  format: ReturnType<typeof describeReaderSource>['format'];
   title: string;
   displayUrl: string | null;
-  preview: ReturnType<typeof decodeTextPreview> | null;
-  table: ReturnType<typeof parseDelimited> | null;
-  query: string;
-  matches: number[];
-  activeMatch: number;
   zoom: number;
   rotation: number;
-  wrap: boolean;
   onOpenExternally: () => void;
 }
 
-function DocumentBody({
+/** The kinds the platform renders itself: PDFs, images, audio and video. */
+function PlatformRenderedBody({
   kind,
+  format,
   title,
   displayUrl,
-  preview,
-  table,
-  query,
-  matches,
-  activeMatch,
   zoom,
   rotation,
-  wrap,
   onOpenExternally,
-}: DocumentBodyProps) {
-  if (preview?.binary) {
-    return (
-      <ViewerFallbackCard
-        title="This file isn't text"
-        description="It was labelled as text but contains binary data, so showing it here would only produce noise."
-        onOpenExternally={onOpenExternally}
-      />
-    );
-  }
-
-  if (table) {
-    return (
-      <TableDocumentView
-        table={table}
-        query={query}
-        matches={matches}
-        activeMatch={activeMatch}
-        zoom={zoom}
-      />
-    );
-  }
-
-  if (preview) {
-    return (
-      <TextDocumentView
-        lines={preview.lines}
-        query={query}
-        matches={matches}
-        activeMatch={activeMatch}
-        zoom={zoom}
-        wrap={wrap}
-      />
-    );
-  }
-
+}: PlatformRenderedBodyProps) {
   if (!displayUrl) {
     return (
       <ViewerFallbackCard
@@ -391,6 +475,23 @@ function DocumentBody({
 
   if (kind === 'image') {
     return <ImageDocumentView url={displayUrl} title={title} zoom={zoom} rotation={rotation} />;
+  }
+
+  if (kind === 'media') {
+    return (
+      <MediaDocumentView
+        url={displayUrl}
+        title={title}
+        media={format === 'audio' ? 'audio' : 'video'}
+        fallback={
+          <ViewerFallbackCard
+            title="Playback happens outside the app here"
+            description="This build carries no media player of its own — your device's player opens it from the same private link."
+            onOpenExternally={onOpenExternally}
+          />
+        }
+      />
+    );
   }
 
   if (kind === 'pdf') {

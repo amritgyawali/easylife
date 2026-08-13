@@ -3,7 +3,12 @@ import { Platform } from 'react-native';
 import { formatFileSize } from '@/utils/bytes';
 import { formatIsoDate } from '@/utils/date';
 import type { DocumentRow, PickedFile } from '@/features/documents/api';
-import { resolveViewerKind, type ViewerKind } from '@/features/documents/viewer/file-kinds';
+import {
+  resolveFileFormat,
+  viewerKindOf,
+  type FileFormat,
+  type ViewerKind,
+} from '@/features/documents/viewer/file-kinds';
 
 /**
  * The two things the reader can open.
@@ -22,6 +27,9 @@ export interface ReaderSourceMeta {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  /** The precise file type, which selects the parser. */
+  format: FileFormat;
+  /** How it will be presented, which selects the view. */
   kind: ViewerKind;
   /** One line of provenance shown under the title. */
   subtitle: string;
@@ -30,7 +38,7 @@ export interface ReaderSourceMeta {
 export function describeReaderSource(source: ReaderSource): ReaderSourceMeta {
   if (source.origin === 'vault') {
     const { document } = source;
-    const kind = resolveViewerKind({ name: document.storage_path, mimeType: document.mime_type });
+    const format = resolveFileFormat({ name: document.storage_path, mimeType: document.mime_type });
 
     return {
       // The id alone: a stored object never changes in place, so editing the
@@ -40,7 +48,8 @@ export function describeReaderSource(source: ReaderSource): ReaderSourceMeta {
       fileName: document.storage_path.split('/').pop() ?? document.title,
       mimeType: document.mime_type,
       sizeBytes: document.file_size_bytes,
-      kind,
+      format,
+      kind: viewerKindOf(format),
       subtitle: [
         formatFileSize(document.file_size_bytes),
         document.institution,
@@ -52,7 +61,7 @@ export function describeReaderSource(source: ReaderSource): ReaderSourceMeta {
   }
 
   const { file } = source;
-  const kind = resolveViewerKind({ name: file.name, mimeType: file.mimeType });
+  const format = resolveFileFormat({ name: file.name, mimeType: file.mimeType });
 
   return {
     key: `local:${file.uri}`,
@@ -60,7 +69,8 @@ export function describeReaderSource(source: ReaderSource): ReaderSourceMeta {
     fileName: file.name,
     mimeType: file.mimeType,
     sizeBytes: file.size,
-    kind,
+    format,
+    kind: viewerKindOf(format),
     subtitle: [formatFileSize(file.size), 'On this device — not saved'].join(' · '),
   };
 }

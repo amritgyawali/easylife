@@ -4,8 +4,8 @@ import { FlatList, ScrollView, View } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
-import type { DelimitedTable } from '@/features/imports/delimited';
 import { HighlightedText } from '@/features/documents/viewer/HighlightedText';
+import type { DocumentGrid } from '@/features/documents/viewer/grid';
 import {
   BASE_MONOSPACE_SIZE,
   MONOSPACE_FONT,
@@ -13,8 +13,8 @@ import {
   monospaceCharWidth,
 } from '@/features/documents/viewer/typography';
 
-export interface TableDocumentViewProps {
-  table: DelimitedTable;
+export interface GridDocumentViewProps {
+  grid: DocumentGrid;
   query: string;
   /** Row indices with a matching cell, in order. */
   matches: number[];
@@ -23,21 +23,20 @@ export interface TableDocumentViewProps {
 }
 
 const MIN_COLUMN_WIDTH = 88;
-const MAX_COLUMN_WIDTH = 280;
-/** Rows sampled to size the columns — enough to be representative, cheap on a 50k-row export. */
+const MAX_COLUMN_WIDTH = 320;
+/** Rows sampled to size the columns — representative, and cheap on a 50k-row export. */
 const WIDTH_SAMPLE_ROWS = 120;
 const ROW_NUMBER_WIDTH = 52;
 
 /**
- * A CSV/TSV read as a spreadsheet rather than as raw text.
+ * Anything tabular: a CSV, a worksheet from a spreadsheet, or the file list of
+ * an archive.
  *
- * This is the whole reason a statement export is worth opening in the app at
- * all: the same parser the import pipeline uses (`parseDelimited`) already
- * knows how to find the header under a bank's preamble and how to honour
- * RFC 4180 quoting, so a payee called `"SHRESTHA, RAM"` lands in one cell
- * here exactly as it does on import.
+ * One view for all three because they are the same problem — a virtualised
+ * grid with a header that stays put vertically and scrolls horizontally with
+ * the columns it labels, sized from the content rather than stretched to fit.
  */
-export function TableDocumentView({ table, query, matches, activeMatch, zoom }: TableDocumentViewProps) {
+export function GridDocumentView({ grid, query, matches, activeMatch, zoom }: GridDocumentViewProps) {
   const theme = useTheme();
   const listRef = useRef<FlatList<string[]> | null>(null);
 
@@ -47,13 +46,13 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
 
   const columnWidths = useMemo(() => {
     const charWidth = monospaceCharWidth(fontSize);
-    const sample = table.rows.slice(0, WIDTH_SAMPLE_ROWS);
+    const sample = grid.rows.slice(0, WIDTH_SAMPLE_ROWS);
 
-    return table.header.map((heading, column) => {
+    return grid.columns.map((heading, column) => {
       const longest = sample.reduce((max, row) => Math.max(max, row[column]?.length ?? 0), heading.length);
       return Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, longest * charWidth + spacing.lg * 2));
     });
-  }, [table, fontSize]);
+  }, [grid, fontSize]);
 
   const totalWidth = useMemo(
     () => columnWidths.reduce((sum, width) => sum + width, ROW_NUMBER_WIDTH),
@@ -69,11 +68,11 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
 
   const matchedRows = useMemo(() => new Set(matches), [matches]);
 
-  if (table.header.length === 0) {
+  if (grid.columns.length === 0) {
     return (
       <View style={{ padding: spacing.xl }}>
         <ThemedText variant="body" tone="muted">
-          No columns could be found in this file. Switch to the text view to see it as it was written.
+          This sheet is empty.
         </ThemedText>
       </View>
     );
@@ -94,7 +93,7 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
           }}
         >
           <View style={{ width: ROW_NUMBER_WIDTH, padding: spacing.sm }} />
-          {table.header.map((heading, column) => (
+          {grid.columns.map((heading, column) => (
             <View key={column} style={{ width: columnWidths[column], padding: spacing.sm }}>
               <ThemedText
                 variant="caption"
@@ -102,7 +101,7 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
                 numberOfLines={2}
                 style={{ fontSize: Math.max(11, fontSize - 1) }}
               >
-                {heading || `Column ${column + 1}`}
+                {heading}
               </ThemedText>
             </View>
           ))}
@@ -110,7 +109,7 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
 
         <FlatList
           ref={listRef}
-          data={table.rows}
+          data={grid.rows}
           keyExtractor={(_row, index) => `${index}`}
           style={{ flex: 1 }}
           initialNumToRender={40}
@@ -149,7 +148,7 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
                 >
                   {index + 1}
                 </ThemedText>
-                {table.header.map((_heading, column) => (
+                {grid.columns.map((_heading, column) => (
                   <View key={column} style={{ width: columnWidths[column], paddingHorizontal: spacing.sm }}>
                     <HighlightedText
                       value={item[column] ?? ''}
@@ -167,7 +166,7 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
           ListEmptyComponent={
             <View style={{ padding: spacing.xl }}>
               <ThemedText variant="body" tone="muted">
-                This file has a header but no data rows.
+                No rows to show.
               </ThemedText>
             </View>
           }
@@ -182,8 +181,8 @@ export function TableDocumentView({ table, query, matches, activeMatch, zoom }: 
                 }}
               >
                 <ThemedText variant="caption" tone="muted">
-                  {table.rows.length.toLocaleString()} rows · {table.header.length} columns
-                  {table.skippedLines > 0 ? ` · ${table.skippedLines} preamble lines skipped` : ''}
+                  {grid.rows.length.toLocaleString()} rows · {grid.columns.length} columns
+                  {grid.note ? ` · ${grid.note}` : ''}
                 </ThemedText>
               </View>
             </View>

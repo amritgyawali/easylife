@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { AppError } from '@/utils/errors';
+import { formatFileSize } from '@/utils/bytes';
+import { DocumentParseError } from '@/features/documents/viewer/parse-error';
 import { downloadDocument, readFileBytes, signedUrlFor } from '@/features/documents/api';
 import { needsBytes } from '@/features/documents/viewer/file-kinds';
 import { describeReaderSource, type ReaderSource } from '@/features/documents/viewer/reader-source';
@@ -12,6 +14,15 @@ import { describeReaderSource, type ReaderSource } from '@/features/documents/vi
  * out of the address bar is worthless within the hour.
  */
 export const READER_URL_TTL_SECONDS = 60 * 60;
+
+/**
+ * Largest file the reader will pull into memory to parse.
+ *
+ * Well above anything the vault accepts (`EXPO_PUBLIC_MAX_UPLOAD_MB`, 15 MB by
+ * default) so it never fires on a stored document, and there to catch the case
+ * the limit doesn't cover: a huge file opened straight off the device.
+ */
+const MAX_IN_MEMORY_BYTES = 64 * 1024 * 1024;
 
 export interface ReaderContent {
   /**
@@ -79,9 +90,20 @@ export function useReaderContent(source: ReaderSource | null): ReaderContentStat
 
     void (async () => {
       try {
-        const { kind, mimeType } = describeReaderSource(current);
+        const { kind, mimeType, sizeBytes } = describeReaderSource(current);
 
         if (needsBytes(kind)) {
+          // Parsing means holding the file, its decoded text and the parsed
+          // result at once. Beyond this a phone would be killed by the OS
+          // rather than shown a document, so say so instead.
+          if (sizeBytes > MAX_IN_MEMORY_BYTES) {
+            throw new DocumentParseError(
+              `This file is ${formatFileSize(sizeBytes)}. The reader opens documents up to ${formatFileSize(
+                MAX_IN_MEMORY_BYTES
+              )} in place; open it outside the app instead.`
+            );
+          }
+
           const bytes =
             current.origin === 'vault'
               ? await downloadDocument(current.document)

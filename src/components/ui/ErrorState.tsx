@@ -10,6 +10,12 @@ export interface ErrorStateProps {
   error: unknown;
   onRetry?: () => void;
   retryLabel?: string;
+  /**
+   * Replaces the generic per-code copy with a specific explanation. Only for
+   * strings this codebase authored for the user — never a message that came
+   * from a server or an exception.
+   */
+  description?: string;
 }
 
 /**
@@ -18,8 +24,8 @@ export interface ErrorStateProps {
  * when one is available, per the error-handling architecture in
  * ARCHITECTURE.md.
  */
-export function ErrorState({ error, onRetry, retryLabel = 'Try again' }: ErrorStateProps) {
-  const message = toUserMessage(error as AppError | unknown);
+export function ErrorState({ error, onRetry, retryLabel = 'Try again', description }: ErrorStateProps) {
+  const message = description ?? toUserMessage(error as AppError | unknown);
 
   return (
     <View

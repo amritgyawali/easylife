@@ -151,10 +151,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <Screen
-      width="prose"
-      header={<ScreenHeader title="Settings" subtitle={user?.email ?? undefined} />}
-    >
+    <Screen width="prose" header={<ScreenHeader title="Settings" subtitle={user?.email ?? undefined} />}>
       {statusMessage ? (
         <Card variant="accent">
           <ThemedText variant="label" tone="primary" accessibilityLiveRegion="polite">
@@ -264,12 +261,7 @@ export default function SettingsScreen() {
                   maxLength={8}
                   placeholder="••••"
                 />
-                <Button
-                  label="Set PIN"
-                  onPress={handleSetPin}
-                  loading={isSettingPin}
-                  variant="secondary"
-                />
+                <Button label="Set PIN" onPress={handleSetPin} loading={isSettingPin} variant="secondary" />
               </View>
             ) : null}
             <ThemedText variant="caption" tone="subtle">

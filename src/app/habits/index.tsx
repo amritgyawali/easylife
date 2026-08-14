@@ -59,7 +59,7 @@ export default function HabitsScreen() {
         <ScreenHeader
           title="Habits"
           subtitle="Check in for today, or tap any day in the last week to correct it."
-          action={<Button label="Add habit" size="sm" onPress={() => openSheet(null)} />}
+          action={<Button label="Add habit" icon="add" size="sm" onPress={() => openSheet(null)} />}
         />
       }
     >
@@ -69,6 +69,7 @@ export default function HabitsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : (habitsQuery.data?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="repeat-outline"
           title="No habits yet"
           description="Track something you want to do regularly. Streaks here are a plain counter — nothing is scored or shamed."
           actionLabel="Add habit"

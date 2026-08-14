@@ -97,6 +97,7 @@ export default function ReportsScreen() {
         <ErrorState error={transactionsQuery.error} onRetry={() => void transactionsQuery.refetch()} />
       ) : !summary || !activeCurrency ? (
         <EmptyState
+          icon="bar-chart-outline"
           title="Nothing to report for this month"
           description="Record some income or spending and the breakdown appears here. Transfers between your own accounts are always excluded."
         />

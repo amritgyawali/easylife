@@ -39,7 +39,7 @@ export default function InvestmentsScreen() {
         <ScreenHeader
           title="Investments"
           subtitle="Values come from prices you record — there is no market feed."
-          action={<Button label="Add holding" size="sm" onPress={() => setAssetSheetOpen(true)} />}
+          action={<Button label="Add holding" icon="add" size="sm" onPress={() => setAssetSheetOpen(true)} />}
         />
       }
     >
@@ -49,6 +49,7 @@ export default function InvestmentsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : portfolio.length === 0 ? (
         <EmptyState
+          icon="trending-up-outline"
           title="No holdings yet"
           description="Track shares, fixed deposits, gold, property or anything else you own."
           actionLabel="Add holding"

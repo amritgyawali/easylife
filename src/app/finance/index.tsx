@@ -137,6 +137,7 @@ export default function TransactionsScreen() {
         <ErrorState error={transactionsQuery.error} onRetry={() => void transactionsQuery.refetch()} />
       ) : (accounts?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="card-outline"
           title="Add an account first"
           description="Transactions post against an account, so there needs to be at least one."
           actionLabel="Go to accounts"

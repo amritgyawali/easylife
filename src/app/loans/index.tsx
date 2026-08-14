@@ -90,7 +90,7 @@ export default function LoansScreen() {
           <ScreenHeader
             title="Loans"
             subtitle="Money lent and borrowed. Balances come from recorded events."
-            action={<Button label="New loan" size="sm" onPress={() => setFormOpen(true)} />}
+            action={<Button label="New loan" icon="add" size="sm" onPress={() => setFormOpen(true)} />}
           />
           <OptionGroup
             options={[
@@ -136,6 +136,7 @@ export default function LoansScreen() {
 
           {visible.length === 0 ? (
             <EmptyState
+              icon="cash-outline"
               title={filter === 'open' ? 'No open loans' : 'Nothing settled yet'}
               description={
                 filter === 'open'

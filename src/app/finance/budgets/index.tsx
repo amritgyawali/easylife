@@ -77,7 +77,7 @@ export default function BudgetsScreen() {
         <ScreenHeader
           title="Budgets"
           subtitle="Set a spending limit per category and watch it fill up as you spend."
-          action={<Button label="New budget" size="sm" onPress={() => setFormOpen(true)} />}
+          action={<Button label="New budget" icon="add" size="sm" onPress={() => setFormOpen(true)} />}
         />
       }
     >
@@ -87,6 +87,7 @@ export default function BudgetsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : budgets.length === 0 ? (
         <EmptyState
+          icon="pie-chart-outline"
           title="No budgets yet"
           description="Plan how much to spend per category for a month or year, then track it as you go."
           actionLabel="New budget"

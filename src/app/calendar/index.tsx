@@ -100,7 +100,7 @@ export default function CalendarScreen() {
         <ScreenHeader
           title="Calendar"
           subtitle={`Events and due tasks for the next ${WEEKS_AHEAD} weeks.`}
-          action={<Button label="Add event" size="sm" onPress={() => openSheet(null, today)} />}
+          action={<Button label="Add event" icon="add" size="sm" onPress={() => openSheet(null, today)} />}
         />
       }
     >
@@ -110,6 +110,7 @@ export default function CalendarScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : days.length === 0 ? (
         <EmptyState
+          icon="calendar-outline"
           title="Nothing scheduled"
           description="Add an event, or give a task a due date and it will show up here."
           actionLabel="Add event"

@@ -94,7 +94,7 @@ export function useImportWizard() {
         throw new AppError(
           'unsupported_document',
           provider.engine === 'server_fallback'
-            ? "No transaction table was found in that photo. This works best on a clear, flat photo of a bank or wallet statement page — for a single receipt, use Scan → File a document instead."
+            ? 'No transaction table was found in that photo. This works best on a clear, flat photo of a bank or wallet statement page — for a single receipt, use Scan → File a document instead.'
             : 'No table could be found in that file.'
         );
       }

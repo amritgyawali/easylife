@@ -135,7 +135,9 @@ export function TransactionFormSheet({ visible, onClose, defaultAccountId }: Tra
   }));
 
   const destinationOptions = accountOptions.filter((option) => option.value !== accountId);
-  const kindOptions = canTransfer ? KIND_OPTIONS : KIND_OPTIONS.filter((option) => option.value !== 'transfer');
+  const kindOptions = canTransfer
+    ? KIND_OPTIONS
+    : KIND_OPTIONS.filter((option) => option.value !== 'transfer');
 
   return (
     <FormSheet

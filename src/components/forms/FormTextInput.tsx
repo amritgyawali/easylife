@@ -1,14 +1,16 @@
+import { useState } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useTheme } from '@/hooks/useTheme';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { transition } from '@/constants/theme';
+import { Field, inputSurface, inputText } from '@/components/forms/Field';
 
 export interface FormTextInputProps extends Omit<TextInputProps, 'style'> {
   name: string;
   label: string;
   helpText?: string;
+  required?: boolean;
 }
 
 /**
@@ -17,51 +19,49 @@ export interface FormTextInputProps extends Omit<TextInputProps, 'style'> {
  * announced to screen readers (accessibilityLiveRegion) and the input
  * marked invalid for assistive tech, satisfying "form-error announcements"
  * in the accessibility requirements.
+ *
+ * Shares `Field` and `inputSurface` with the controlled `TextField`, so the
+ * auth forms and the feature sheets are pixel-identical.
  */
-export function FormTextInput({ name, label, helpText, ...inputProps }: FormTextInputProps) {
+export function FormTextInput({ name, label, helpText, required, ...inputProps }: FormTextInputProps) {
   const theme = useTheme();
   const { control } = useFormContext();
+  const [focused, setFocused] = useState(false);
 
   return (
     <Controller
       control={control}
       name={name}
       render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted" nativeID={`${name}-label`}>
-            {label}
-          </ThemedText>
-          <TextInput
-            accessibilityLabelledBy={`${name}-label`}
-            accessibilityState={{ disabled: inputProps.editable === false }}
-            aria-invalid={Boolean(error)}
-            style={{
-              minHeight: minTouchTarget,
-              borderWidth: 1,
-              borderColor: error ? theme.colors.negative : theme.colors.border,
-              borderRadius: radius.md,
-              paddingHorizontal: spacing.md,
-              color: theme.colors.text,
-              backgroundColor: theme.colors.surface,
-              // Below 16px, iOS Safari zooms the whole page in on focus.
-              fontSize: fontSize.md,
-            }}
-            placeholderTextColor={theme.colors.textMuted}
-            onBlur={onBlur}
-            onChangeText={onChange}
-            value={typeof value === 'string' ? value : ''}
-            {...inputProps}
-          />
-          {error ? (
-            <ThemedText variant="caption" tone="negative" accessibilityLiveRegion="polite">
-              {error.message}
-            </ThemedText>
-          ) : helpText ? (
-            <ThemedText variant="caption" tone="muted">
-              {helpText}
-            </ThemedText>
-          ) : null}
-        </View>
+        <Field label={label} error={error?.message} helpText={helpText} required={required}>
+          <View
+            style={[
+              inputSurface(theme, {
+                focused,
+                invalid: Boolean(error),
+                disabled: inputProps.editable === false,
+              }),
+              { justifyContent: 'center' },
+              transition(),
+            ]}
+          >
+            <TextInput
+              accessibilityLabel={label}
+              accessibilityState={{ disabled: inputProps.editable === false }}
+              aria-invalid={Boolean(error)}
+              style={inputText(theme)}
+              placeholderTextColor={theme.colors.textSubtle}
+              onFocus={() => setFocused(true)}
+              onBlur={() => {
+                setFocused(false);
+                onBlur();
+              }}
+              onChangeText={onChange}
+              value={typeof value === 'string' ? value : ''}
+              {...inputProps}
+            />
+          </View>
+        </Field>
       )}
     />
   );

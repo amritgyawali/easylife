@@ -1,11 +1,10 @@
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { Badge } from '@/components/ui/Badge';
 import { IconButton } from '@/components/ui/IconButton';
+import { ListRow } from '@/components/ui/ListRow';
+import { ThemedText } from '@/components/ui/ThemedText';
 import { formatMoney } from '@/utils/money';
 import { relativeDayLabel, type IsoDate } from '@/utils/date';
 import type { TransactionRow } from '@/features/finance/transactions-api';
@@ -18,6 +17,8 @@ export interface TransactionListItemProps {
   categoryName?: string;
   counterpartyName?: string;
   onDelete?: () => void;
+  /** False for the first row in a card, so the group has no leading rule. */
+  divider?: boolean;
 }
 
 /**
@@ -36,66 +37,48 @@ export function TransactionListItem({
   categoryName,
   counterpartyName,
   onDelete,
+  divider = true,
 }: TransactionListItemProps) {
-  const theme = useTheme();
-
   const isIncome = transaction.transaction_type === 'income';
   const isTransfer = transaction.transaction_type === 'transfer';
 
   const tone = isTransfer ? 'default' : isIncome ? 'positive' : 'negative';
   const sign = isTransfer ? '' : isIncome ? '+' : '-';
-  const icon = isTransfer ? 'swap-horizontal' : isIncome ? 'arrow-down' : 'arrow-up';
-  const iconColor = isTransfer
-    ? theme.colors.textMuted
-    : isIncome
-      ? theme.colors.positive
-      : theme.colors.negative;
+  const amount = formatMoney(transaction.amount_minor, transaction.currency);
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.md,
-        paddingVertical: spacing.md,
-        paddingLeft: spacing.md,
-        paddingRight: onDelete ? spacing.xs : spacing.md,
-      }}
-    >
-      <Ionicons name={icon} size={20} color={iconColor} />
-
-      <View style={{ flex: 1, gap: spacing.xxs }}>
-        <ThemedText variant="body" numberOfLines={1}>
-          {transaction.description || counterpartyName || categoryName || 'Transaction'}
-        </ThemedText>
-        <ThemedText variant="caption" tone="muted" numberOfLines={1}>
-          {relativeDayLabel(transaction.transaction_date, today)}
-          {accountName ? ` · ${accountName}` : ''}
-          {isTransfer && destinationAccountName ? ` → ${destinationAccountName}` : ''}
-        </ThemedText>
-        {categoryName || counterpartyName ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xxs }}>
-            {categoryName ? <Badge label={categoryName} /> : null}
-            {counterpartyName ? <Badge label={counterpartyName} tone="primary" /> : null}
-          </View>
-        ) : null}
-      </View>
-
-      <ThemedText variant="body" weight="semibold" tone={tone}>
-        {sign}
-        {formatMoney(transaction.amount_minor, transaction.currency)}
-      </ThemedText>
-
-      {onDelete ? (
-        <IconButton
-          icon="trash-outline"
-          accessibilityLabel={`Delete ${transaction.description || 'transaction'} of ${formatMoney(
-            transaction.amount_minor,
-            transaction.currency
-          )}`}
-          onPress={onDelete}
-        />
-      ) : null}
-    </View>
+    <ListRow
+      divider={divider}
+      icon={isTransfer ? 'swap-horizontal' : isIncome ? 'arrow-down' : 'arrow-up'}
+      iconTone={isTransfer ? 'neutral' : isIncome ? 'positive' : 'negative'}
+      title={transaction.description || counterpartyName || categoryName || 'Transaction'}
+      subtitle={`${relativeDayLabel(transaction.transaction_date, today)}${
+        accountName ? ` · ${accountName}` : ''
+      }${isTransfer && destinationAccountName ? ` → ${destinationAccountName}` : ''}`}
+      meta={
+        categoryName || counterpartyName ? (
+          <>
+            {categoryName ? <Badge label={categoryName} size="sm" /> : null}
+            {counterpartyName ? <Badge label={counterpartyName} size="sm" tone="primary" /> : null}
+          </>
+        ) : undefined
+      }
+      trailing={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <ThemedText variant="body" weight="semibold" tone={tone} numeric>
+            {sign}
+            {amount}
+          </ThemedText>
+          {onDelete ? (
+            <IconButton
+              icon="trash-outline"
+              accessibilityLabel={`Delete ${transaction.description || 'transaction'} of ${amount}`}
+              onPress={onDelete}
+              size={17}
+            />
+          ) : null}
+        </View>
+      }
+    />
   );
 }

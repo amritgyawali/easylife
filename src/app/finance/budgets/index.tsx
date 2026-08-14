@@ -105,8 +105,9 @@ export default function BudgetsScreen() {
             onManageCategories={() => router.push('/finance/categories')}
             onEditItem={(item) => setItemSheet({ budget, item })}
             onDeleteItem={(item) =>
-              confirmAndRun(`Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`, () =>
-                deleteBudgetItem.mutate(item.id)
+              confirmAndRun(
+                `Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`,
+                () => deleteBudgetItem.mutate(item.id)
               )
             }
             onDelete={() =>
@@ -124,8 +125,12 @@ export default function BudgetsScreen() {
         budget={itemSheet?.budget ?? null}
         item={itemSheet?.item ?? null}
         usedCategoryIds={
-          new Set((itemSheet ? budgets.find((row) => row.budget.id === itemSheet.budget.id) : undefined)
-            ?.itemProgress.map((entry) => entry.item.category_id) ?? [])
+          new Set(
+            (itemSheet
+              ? budgets.find((row) => row.budget.id === itemSheet.budget.id)
+              : undefined
+            )?.itemProgress.map((entry) => entry.item.category_id) ?? []
+          )
         }
         categories={expenseCategories}
         onClose={() => setItemSheet(null)}
@@ -437,7 +442,7 @@ function BudgetFormSheet({
           />
           <ThemedText variant="body" style={{ flex: 1 }}>
             Start from &quot;{previousBudget.name}&quot;&apos;s categories
-            {rolloverEnabled ? ', carrying over what\'s unspent' : ''}
+            {rolloverEnabled ? ", carrying over what's unspent" : ''}
           </ThemedText>
         </View>
       ) : null}

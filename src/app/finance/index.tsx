@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,11 +9,13 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { Section } from '@/components/ui/Section';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { OptionGroup } from '@/components/forms/OptionGroup';
 import { useToday } from '@/hooks/useToday';
 import { relativeDayLabel } from '@/utils/date';
+import { formatMoney } from '@/utils/money';
 import { useAccounts } from '@/features/finance/accounts-api';
 import { useCategories } from '@/features/finance/categories-api';
 import { useCounterparties } from '@/features/finance/counterparties-api';
@@ -111,7 +112,9 @@ export default function TransactionsScreen() {
           <ScreenHeader
             title="Transactions"
             subtitle="Every entry posts to the double-entry ledger."
-            action={<Button label="Add" size="sm" onPress={() => setSheetOpen(true)} />}
+            action={
+              <Button label="Add transaction" icon="add" size="sm" onPress={() => setSheetOpen(true)} />
+            }
           />
           <SearchInput value={query} onChangeText={setQuery} placeholder="Search transactions" />
           <OptionGroup
@@ -123,6 +126,7 @@ export default function TransactionsScreen() {
             ]}
             value={kind}
             onChange={setKind}
+            size="sm"
           />
         </>
       }
@@ -151,16 +155,18 @@ export default function TransactionsScreen() {
         />
       ) : (
         byDay.map(([date, transactions]) => (
-          <View key={date} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {relativeDayLabel(date, today).toUpperCase()}
-            </ThemedText>
+          <Section
+            key={date}
+            title={relativeDayLabel(date, today)}
+            action={<DayTotal transactions={transactions} />}
+          >
             <Card padded={false}>
-              {transactions.map((transaction) => (
+              {transactions.map((transaction, index) => (
                 <TransactionListItem
                   key={transaction.id}
                   transaction={transaction}
                   today={today}
+                  divider={index > 0}
                   accountName={nameOf.account.get(transaction.account_id ?? '')}
                   destinationAccountName={nameOf.account.get(transaction.destination_account_id ?? '')}
                   categoryName={nameOf.category.get(transaction.category_id ?? '')}
@@ -169,11 +175,43 @@ export default function TransactionsScreen() {
                 />
               ))}
             </Card>
-          </View>
+          </Section>
         ))
       )}
 
       <TransactionFormSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />
     </Screen>
+  );
+}
+
+/**
+ * Net movement for one day, shown beside the date heading.
+ *
+ * Transfers are excluded — money moved between your own accounts isn't income
+ * or spending. Only rendered when the day is single-currency: summing across
+ * currencies without a rate would be a made-up number, and the day's rows
+ * already show each amount individually.
+ */
+function DayTotal({ transactions }: { transactions: TransactionRow[] }) {
+  const currencies = new Set(transactions.map((transaction) => transaction.currency));
+  if (currencies.size !== 1) return null;
+
+  const currency = [...currencies][0];
+  if (!currency) return null;
+
+  const net = transactions.reduce((total, transaction) => {
+    if (transaction.transaction_type === 'transfer') return total;
+    return transaction.transaction_type === 'income'
+      ? total + transaction.amount_minor
+      : total - transaction.amount_minor;
+  }, 0);
+
+  if (net === 0) return null;
+
+  return (
+    <ThemedText variant="caption" tone={net > 0 ? 'positive' : 'negative'} weight="semibold" numeric>
+      {net > 0 ? '+' : '-'}
+      {formatMoney(Math.abs(net), currency)}
+    </ThemedText>
   );
 }

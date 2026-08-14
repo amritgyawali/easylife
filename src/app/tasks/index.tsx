@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
@@ -9,9 +7,9 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { Section } from '@/components/ui/Section';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { OptionGroup } from '@/components/forms/OptionGroup';
+import { SegmentedControl } from '@/components/forms/SegmentedControl';
 import { useToday } from '@/hooks/useToday';
 import { useTasks, useToggleTaskComplete, type TaskRow } from '@/features/tasks/api';
 import { groupTasks, isOpen } from '@/features/tasks/grouping';
@@ -69,10 +67,10 @@ export default function TasksScreen() {
           <ScreenHeader
             title="Planner"
             subtitle="Everything on your plate, grouped by when it's due."
-            action={<Button label="Add task" size="sm" onPress={() => openSheet(null)} />}
+            action={<Button label="Add task" icon="add" size="sm" onPress={() => openSheet(null)} />}
           />
           <SearchInput value={query} onChangeText={setQuery} placeholder="Search tasks" />
-          <OptionGroup
+          <SegmentedControl
             options={[
               { value: 'open', label: 'To do' },
               { value: 'done', label: 'Completed' },
@@ -89,14 +87,19 @@ export default function TasksScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : filter === 'done' ? (
         completed.length === 0 ? (
-          <EmptyState title="Nothing completed yet" description="Finished tasks will collect here." />
+          <EmptyState
+            icon="checkmark-done-outline"
+            title="Nothing completed yet"
+            description="Finished tasks will collect here."
+          />
         ) : (
           <Card padded={false}>
-            {completed.map((task) => (
+            {completed.map((task, index) => (
               <TaskListItem
                 key={task.id}
                 task={task}
                 today={today}
+                divider={index > 0}
                 onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
                 onPress={() => openSheet(task)}
               />
@@ -105,6 +108,7 @@ export default function TasksScreen() {
         )
       ) : sections.length === 0 ? (
         <EmptyState
+          icon={query ? 'search-outline' : 'sparkles-outline'}
           title={query ? 'No matching tasks' : 'Your list is clear'}
           description={query ? 'Try a different search.' : 'Add the first thing you need to get done.'}
           actionLabel={query ? undefined : 'Add task'}
@@ -112,22 +116,20 @@ export default function TasksScreen() {
         />
       ) : (
         sections.map((section) => (
-          <View key={section.bucket} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {section.title.toUpperCase()} · {section.tasks.length}
-            </ThemedText>
+          <Section key={section.bucket} title={section.title} count={section.tasks.length}>
             <Card padded={false}>
-              {section.tasks.map((task) => (
+              {section.tasks.map((task, index) => (
                 <TaskListItem
                   key={task.id}
                   task={task}
                   today={today}
+                  divider={index > 0}
                   onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
                   onPress={() => openSheet(task)}
                 />
               ))}
             </Card>
-          </View>
+          </Section>
         ))
       )}
 

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
+import { useHover } from '@/hooks/useHover';
+import { elevation, minTouchTarget, radius, spacing, transition } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { FormSheet } from '@/components/ui/FormSheet';
-import { OptionGroup } from '@/components/forms/OptionGroup';
+import { TextField } from '@/components/forms/TextField';
+import { SegmentedControl } from '@/components/forms/SegmentedControl';
 import { useToday } from '@/hooks/useToday';
 import { useQuickAdd } from '@/features/quick-add/api';
 
@@ -27,6 +30,7 @@ export function QuickAddButton() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const compact = useCompactLayout();
+  const { hovered, hoverProps } = useHover();
   const { today } = useToday();
   const { addTask, addNote } = useQuickAdd();
 
@@ -65,113 +69,102 @@ export function QuickAddButton() {
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Quick add"
+        accessibilityLabel="Quick add a task or note"
         onPress={() => setOpen(true)}
-        style={({ pressed }) => ({
-          position: 'absolute',
-          right: spacing.lg,
-          bottom,
-          width: 56,
-          height: 56,
-          borderRadius: radius.full,
-          backgroundColor: theme.colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: pressed ? 0.85 : 1,
-          shadowColor: '#000',
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 6,
-        })}
+        {...hoverProps}
+        style={({ pressed }) => [
+          {
+            position: 'absolute',
+            right: compact ? spacing.lg : spacing.xl,
+            bottom,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            height: 56,
+            // Grows into a labelled pill on desktop, where there is room for
+            // it and no bottom bar competing for attention.
+            paddingHorizontal: compact ? 0 : spacing.lg,
+            width: compact ? 56 : undefined,
+            borderRadius: radius.full,
+            backgroundColor: hovered ? theme.colors.primaryHover : theme.colors.primary,
+            alignSelf: 'flex-start',
+            justifyContent: 'center',
+            transform: pressed ? [{ scale: 0.94 }] : undefined,
+          },
+          elevation('lg', theme.mode),
+          transition(),
+        ]}
       >
-        <Ionicons name="add" size={30} color={theme.colors.primaryText} />
+        <Ionicons name="add" size={compact ? 30 : 22} color={theme.colors.primaryText} />
+        {compact ? null : (
+          <ThemedText variant="label" weight="semibold" style={{ color: theme.colors.primaryText }}>
+            Quick add
+          </ThemedText>
+        )}
       </Pressable>
 
       <FormSheet
         visible={open}
         onClose={close}
         title="Quick add"
+        subtitle="Saved on this device first, synced when you're back online."
         footer={
           <>
             <View style={{ flex: 1 }}>
-              <Button label="Cancel" variant="ghost" onPress={close} />
+              <Button label="Cancel" variant="secondary" fullWidth onPress={close} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="Add" onPress={submit} disabled={!title.trim()} />
+              <Button label="Add" fullWidth onPress={submit} disabled={!title.trim()} />
             </View>
           </>
         }
       >
-        <OptionGroup
+        <SegmentedControl
           options={[
             { value: 'task', label: 'Task' },
             { value: 'note', label: 'Note' },
           ]}
           value={kind}
-          onChange={(value) => setKind(value as QuickKind)}
+          onChange={setKind}
+          fullWidth
         />
 
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted">
-            {kind === 'task' ? 'What needs doing?' : 'Title'}
-          </ThemedText>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            autoFocus={!compact}
-            placeholder={kind === 'task' ? 'e.g. Pay electricity bill' : 'Note title'}
-            placeholderTextColor={theme.colors.textMuted}
-            onSubmitEditing={submit}
-            returnKeyType="done"
-            style={inputStyle(theme)}
-          />
-        </View>
+        <TextField
+          label={kind === 'task' ? 'What needs doing?' : 'Title'}
+          value={title}
+          onChangeText={setTitle}
+          autoFocus
+          placeholder={kind === 'task' ? 'e.g. Pay electricity bill' : 'Note title'}
+          onSubmitEditing={submit}
+          returnKeyType="done"
+        />
 
         {kind === 'task' ? (
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: dueToday }}
+            accessibilityLabel="Due today"
             onPress={() => setDueToday((value) => !value)}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: minTouchTarget }}
           >
-            <Ionicons
-              name={dueToday ? 'checkbox' : 'square-outline'}
-              size={22}
-              color={dueToday ? theme.colors.primary : theme.colors.textMuted}
-            />
+            {/* The whole row is the target; the box itself must not also
+                handle the press or a tap on it would toggle twice. */}
+            <View pointerEvents="none">
+              <Checkbox checked={dueToday} onChange={setDueToday} accessibilityLabel="Due today" />
+            </View>
             <ThemedText variant="body">Due today</ThemedText>
           </Pressable>
         ) : (
-          <View style={{ gap: spacing.xs }}>
-            <ThemedText variant="label" tone="muted">
-              Note (optional)
-            </ThemedText>
-            <TextInput
-              value={body}
-              onChangeText={setBody}
-              placeholder="Write something…"
-              placeholderTextColor={theme.colors.textMuted}
-              multiline
-              style={[inputStyle(theme), { minHeight: 96, textAlignVertical: 'top' }]}
-            />
-          </View>
+          <TextField
+            label="Note"
+            helpText="Optional — you can flesh it out later."
+            value={body}
+            onChangeText={setBody}
+            placeholder="Write something…"
+            multiline
+          />
         )}
       </FormSheet>
     </>
   );
-}
-
-function inputStyle(theme: ReturnType<typeof useTheme>) {
-  return {
-    minHeight: minTouchTarget,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: theme.colors.text,
-    // Below 16px, iOS Safari zooms the whole page in on focus.
-    fontSize: fontSize.md,
-  };
 }

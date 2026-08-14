@@ -2,7 +2,7 @@ import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { minTouchTarget, radius } from '@/constants/theme';
+import { minTouchTarget, radius, transition } from '@/constants/theme';
 
 export interface CheckboxProps {
   checked: boolean;
@@ -35,17 +35,21 @@ export function Checkbox({
       disabled={disabled}
       hitSlop={(minTouchTarget - size) / 2}
       onPress={() => onChange(!checked)}
-      style={({ pressed }) => ({
-        width: size,
-        height: size,
-        borderRadius: radius.sm,
-        borderWidth: 2,
-        borderColor: checked ? theme.colors.primary : theme.colors.border,
-        backgroundColor: checked ? theme.colors.primary : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
-      })}
+      style={({ pressed }) => [
+        {
+          width: size,
+          height: size,
+          borderRadius: radius.xs,
+          borderWidth: 2,
+          borderColor: checked ? theme.colors.primary : theme.colors.borderStrong,
+          backgroundColor: checked ? theme.colors.primary : theme.colors.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: disabled ? 0.5 : 1,
+          transform: pressed ? [{ scale: 0.88 }] : undefined,
+        },
+        transition(),
+      ]}
     >
       {checked ? <Ionicons name="checkmark" size={size - 8} color={theme.colors.primaryText} /> : null}
     </Pressable>

@@ -1,14 +1,20 @@
 import { useState, type ReactNode } from 'react';
-import { Alert, Platform, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, Platform, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Divider } from '@/components/ui/Divider';
+import { Section } from '@/components/ui/Section';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { Screen } from '@/components/layout/Screen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { TextField } from '@/components/forms/TextField';
 import { OptionGroup } from '@/components/forms/OptionGroup';
-import { spacing, minTouchTarget, radius, fontSize } from '@/constants/theme';
+import { SegmentedControl } from '@/components/forms/SegmentedControl';
+import { spacing } from '@/constants/theme';
 import { SUPPORTED_CURRENCIES } from '@/constants/app';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeStore, type ThemePreference } from '@/stores/theme-store';
@@ -30,7 +36,6 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }));
 
 export default function SettingsScreen() {
-  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { data, isLoading, isError, error, refetch } = useProfile();
@@ -48,9 +53,9 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.xl }}>
+      <Screen width="prose">
         <SkeletonList rows={6} />
-      </ScrollView>
+      </Screen>
     );
   }
 
@@ -146,106 +151,100 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{
-        padding: spacing.xl,
-        gap: spacing.xl,
-        maxWidth: 640,
-        width: '100%',
-        alignSelf: 'center',
-      }}
+    <Screen
+      width="prose"
+      header={<ScreenHeader title="Settings" subtitle={user?.email ?? undefined} />}
     >
-      <ThemedText variant="title" weight="bold">
-        Settings
-      </ThemedText>
-
       {statusMessage ? (
-        <ThemedText variant="body" tone="muted" accessibilityLiveRegion="polite">
-          {statusMessage}
-        </ThemedText>
+        <Card variant="accent">
+          <ThemedText variant="label" tone="primary" accessibilityLiveRegion="polite">
+            {statusMessage}
+          </ThemedText>
+        </Card>
       ) : null}
 
       <Section title="Profile">
-        <View style={{ gap: spacing.xs }}>
-          <ThemedText variant="label" tone="muted">
-            Name
-          </ThemedText>
-          <TextInput
+        <Card style={{ gap: spacing.lg }}>
+          <TextField
+            label="Name"
             defaultValue={profile.full_name ?? ''}
             onChangeText={setFullName}
             placeholder="Your name"
-            placeholderTextColor={theme.colors.textMuted}
-            style={{
-              minHeight: minTouchTarget,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: radius.md,
-              paddingHorizontal: spacing.md,
-              color: theme.colors.text,
-              fontSize: fontSize.md,
-            }}
           />
-        </View>
-        <ThemedText variant="body" tone="muted">
-          {user?.email}
-        </ThemedText>
-        <Button label="Save name" onPress={saveName} loading={isSavingName} variant="secondary" />
+          <Button
+            label="Save name"
+            onPress={saveName}
+            loading={isSavingName}
+            variant="secondary"
+            icon="checkmark"
+          />
+        </Card>
       </Section>
 
       <Section title="Regional">
-        <OptionGroup
-          label="Default currency"
-          options={CURRENCY_OPTIONS}
-          value={profile.default_currency}
-          onChange={(value) =>
-            void runPreferenceUpdate(() => updateProfile.mutateAsync({ defaultCurrency: value }))
-          }
-        />
-        <OptionGroup
-          label="Date display"
-          options={[
-            { value: 'AD', label: 'AD (Gregorian)' },
-            { value: 'BS', label: 'BS (Bikram Sambat)' },
-          ]}
-          value={preferences.date_system}
-          onChange={(value) =>
-            void runPreferenceUpdate(() =>
-              updatePreferences.mutateAsync({ dateSystem: value as 'AD' | 'BS' })
-            )
-          }
-        />
-        <OptionGroup
-          label="Week starts on"
-          options={[
-            { value: '0', label: 'Sunday' },
-            { value: '1', label: 'Monday' },
-          ]}
-          value={String(preferences.week_start)}
-          onChange={(value) =>
-            void runPreferenceUpdate(() => updatePreferences.mutateAsync({ weekStart: Number(value) }))
-          }
-        />
+        <Card style={{ gap: spacing.lg }}>
+          <OptionGroup
+            label="Default currency"
+            options={CURRENCY_OPTIONS}
+            value={profile.default_currency}
+            size="sm"
+            onChange={(value) =>
+              void runPreferenceUpdate(() => updateProfile.mutateAsync({ defaultCurrency: value }))
+            }
+          />
+          <Divider />
+          <SegmentedControl
+            label="Date display"
+            options={[
+              { value: 'AD', label: 'AD (Gregorian)' },
+              { value: 'BS', label: 'BS (Bikram Sambat)' },
+            ]}
+            value={preferences.date_system}
+            onChange={(value) =>
+              void runPreferenceUpdate(() =>
+                updatePreferences.mutateAsync({ dateSystem: value as 'AD' | 'BS' })
+              )
+            }
+          />
+          <SegmentedControl
+            label="Week starts on"
+            options={[
+              { value: '0', label: 'Sunday' },
+              { value: '1', label: 'Monday' },
+            ]}
+            value={String(preferences.week_start)}
+            onChange={(value) =>
+              void runPreferenceUpdate(() => updatePreferences.mutateAsync({ weekStart: Number(value) }))
+            }
+          />
+        </Card>
       </Section>
 
       <Section title="Appearance">
-        <OptionGroup
-          label="Theme"
-          options={THEME_OPTIONS}
-          value={themePreference}
-          onChange={setThemePreference}
-        />
+        <Card>
+          <SegmentedControl
+            label="Theme"
+            options={THEME_OPTIONS}
+            value={themePreference}
+            onChange={setThemePreference}
+            fullWidth
+          />
+        </Card>
       </Section>
 
       {Platform.OS !== 'web' ? (
         <Section title="App lock">
-          <Row>
-            <ThemedText variant="body">Biometric unlock</ThemedText>
-            <Switch value={preferences.biometric_lock_enabled} onValueChange={toggleBiometric} />
-          </Row>
-          <Row>
-            <ThemedText variant="body">PIN unlock</ThemedText>
-            <Switch
+          <Card style={{ gap: spacing.lg }}>
+            <ToggleRow
+              title="Biometric unlock"
+              description="Use your fingerprint or face to open the app."
+              value={preferences.biometric_lock_enabled}
+              onValueChange={toggleBiometric}
+            />
+            <Divider />
+            <ToggleRow
+              title="PIN unlock"
+              description="A short code as a fallback to biometrics."
               value={preferences.pin_lock_enabled}
               onValueChange={(enabled) => {
                 if (!enabled) {
@@ -253,75 +252,123 @@ export default function SettingsScreen() {
                 }
               }}
             />
-          </Row>
-          {!preferences.pin_lock_enabled ? (
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <TextInput
-                value={pinDraft}
-                onChangeText={setPinDraft}
-                secureTextEntry
-                keyboardType="number-pad"
-                maxLength={8}
-                placeholder="New PIN (4+ digits)"
-                placeholderTextColor={theme.colors.textMuted}
-                style={{
-                  flex: 1,
-                  minHeight: minTouchTarget,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  borderRadius: radius.md,
-                  paddingHorizontal: spacing.md,
-                  color: theme.colors.text,
-                  fontSize: fontSize.md,
-                }}
-              />
-              <Button label="Set PIN" onPress={handleSetPin} loading={isSettingPin} variant="secondary" />
-            </View>
-          ) : null}
-          <ThemedText variant="caption" tone="muted">
-            App locks automatically after {preferences.auto_lock_minutes} minutes in the background.
-          </ThemedText>
+            {!preferences.pin_lock_enabled ? (
+              <View style={{ gap: spacing.md }}>
+                <TextField
+                  label="New PIN"
+                  helpText="At least 4 digits."
+                  value={pinDraft}
+                  onChangeText={setPinDraft}
+                  secureTextEntry
+                  keyboardType="number-pad"
+                  maxLength={8}
+                  placeholder="••••"
+                />
+                <Button
+                  label="Set PIN"
+                  onPress={handleSetPin}
+                  loading={isSettingPin}
+                  variant="secondary"
+                />
+              </View>
+            ) : null}
+            <ThemedText variant="caption" tone="subtle">
+              App locks automatically after {preferences.auto_lock_minutes} minutes in the background.
+            </ThemedText>
+          </Card>
         </Section>
       ) : null}
 
       <Section title="Data & sync">
-        <Button label="Data & backup" variant="secondary" onPress={() => router.push('/settings/data')} />
-        <Button
-          label="Sync & notifications"
-          variant="secondary"
-          onPress={() => router.push('/settings/sync')}
-        />
+        <Card style={{ gap: spacing.md }}>
+          <Button
+            label="Data & backup"
+            variant="secondary"
+            icon="cloud-download-outline"
+            onPress={() => router.push('/settings/data')}
+          />
+          <Button
+            label="Sync & notifications"
+            variant="secondary"
+            icon="sync-outline"
+            onPress={() => router.push('/settings/sync')}
+          />
+        </Card>
       </Section>
 
       <Section title="Account">
-        <Button label="Sign out" variant="secondary" onPress={handleSignOut} loading={isSigningOut} />
+        <Card>
+          <Button
+            label="Sign out"
+            variant="secondary"
+            icon="log-out-outline"
+            onPress={handleSignOut}
+            loading={isSigningOut}
+          />
+        </Card>
       </Section>
 
       <Section title="Danger zone">
-        <ThemedText variant="body" tone="muted">
-          Deleting your account permanently removes all your data. This cannot be undone.
-        </ThemedText>
-        <Button label="Delete my account" variant="danger" onPress={confirmDeleteAccount} />
+        <Card style={{ gap: spacing.md }}>
+          <ThemedText variant="body" tone="muted">
+            Deleting your account permanently removes all your data. This cannot be undone.
+          </ThemedText>
+          <Button
+            label="Delete my account"
+            variant="danger"
+            icon="trash-outline"
+            onPress={confirmDeleteAccount}
+          />
+        </Card>
       </Section>
-    </ScrollView>
+    </Screen>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={{ gap: spacing.md }}>
-      <ThemedText variant="subtitle">{title}</ThemedText>
-      <Card>
-        <View style={{ gap: spacing.md }}>{children}</View>
-      </Card>
-    </View>
-  );
-}
+/**
+ * A labelled switch with room for an explanation. The description matters
+ * here: a bare "PIN unlock" toggle doesn't tell anyone what turning it on
+ * actually does.
+ */
+function ToggleRow({
+  title,
+  description,
+  value,
+  onValueChange,
+}: {
+  title: string;
+  description?: ReactNode;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const theme = useTheme();
 
-function Row({ children }: { children: ReactNode }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      {children}
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: spacing.lg,
+      }}
+    >
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <ThemedText variant="body" weight="medium">
+          {title}
+        </ThemedText>
+        {description ? (
+          <ThemedText variant="caption" tone="muted">
+            {description}
+          </ThemedText>
+        ) : null}
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        accessibilityLabel={title}
+        trackColor={{ false: theme.colors.surfaceAlt, true: theme.colors.primary }}
+        thumbColor={theme.colors.surface}
+      />
     </View>
   );
 }

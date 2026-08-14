@@ -1,12 +1,12 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { spacing, radius } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useTheme } from '@/hooks/useTheme';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 import { formatMoney } from '@/utils/money';
 import { useGoalsWithProgress } from '@/features/goals/api';
 
@@ -16,7 +16,6 @@ import { useGoalsWithProgress } from '@/features/goals/api';
  * goals — matches BudgetSummaryCard's "no card is better than an empty one".
  */
 export function GoalsSummaryCard() {
-  const theme = useTheme();
   const router = useRouter();
   const { data, isLoading } = useGoalsWithProgress();
 
@@ -43,48 +42,34 @@ export function GoalsSummaryCard() {
   return (
     <Card style={{ gap: spacing.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ThemedText
-          variant="label"
-          tone="muted"
-          weight="semibold"
-          accessibilityRole="header"
-          style={{ flex: 1 }}
-        >
-          SAVINGS GOALS
+        <ThemedText variant="overline" tone="muted" accessibilityRole="header" style={{ flex: 1 }}>
+          Savings goals
         </ThemedText>
-        <Button label="Open" size="sm" variant="ghost" onPress={() => router.push('/finance/goals')} />
+        <Button
+          label="Open"
+          size="sm"
+          variant="ghost"
+          icon="chevron-forward"
+          iconPosition="trailing"
+          onPress={() => router.push('/finance/goals')}
+        />
       </View>
 
       {[...totalsByCurrency.entries()].map(([currency, totals]) => {
         const progress = totals.targetMinor > 0 ? Math.min(1, totals.savedMinor / totals.targetMinor) : 0;
 
         return (
-          <View key={currency} style={{ gap: spacing.xs }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <ThemedText variant="body">
-                {formatMoney(totals.savedMinor, currency)} of {formatMoney(totals.targetMinor, currency)}
-              </ThemedText>
-              <ThemedText variant="body" tone="muted">
-                {Math.round(progress * 100)}%
-              </ThemedText>
-            </View>
-            <View
-              style={{
-                height: 6,
-                borderRadius: radius.full,
-                backgroundColor: theme.colors.surfaceAlt,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  width: `${progress * 100}%`,
-                  height: '100%',
-                  backgroundColor: theme.colors.positive,
-                }}
-              />
-            </View>
-          </View>
+          <ProgressBar
+            key={currency}
+            value={progress}
+            tone="positive"
+            label={`${formatMoney(totals.savedMinor, currency)} of ${formatMoney(
+              totals.targetMinor,
+              currency
+            )}`}
+            hint={`${Math.round(progress * 100)}%`}
+            accessibilityLabel={`Savings goals in ${currency}: ${Math.round(progress * 100)} percent saved`}
+          />
         );
       })}
     </Card>

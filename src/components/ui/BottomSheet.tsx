@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useCompactLayout } from '@/hooks/useCompactLayout';
-import { minTouchTarget, radius, spacing } from '@/constants/theme';
+import { elevation, minTouchTarget, radius, spacing } from '@/constants/theme';
 import { useVisualViewport } from '@/hooks/useVisualViewport';
 import { ThemedText } from '@/components/ui/ThemedText';
 
@@ -13,6 +13,8 @@ export interface BottomSheetProps extends PropsWithChildren {
   visible: boolean;
   title: string;
   onClose: () => void;
+  /** One line of context under the title. */
+  subtitle?: string;
   /** Action row pinned below the scrollable body, e.g. Save / Cancel. */
   footer?: ReactNode;
   /**
@@ -26,11 +28,19 @@ export interface BottomSheetProps extends PropsWithChildren {
 const MAX_HEIGHT_RATIO = 0.9;
 const COMPACT_MAX_HEIGHT_RATIO = 0.84;
 
+/** Dialog width on desktop — wide enough for a two-column form, no wider. */
+const DIALOG_WIDTH = 560;
+
 /**
- * The one modal shell every bottom sheet in the app is built on.
+ * The one modal shell every sheet and dialog in the app is built on.
  *
- * Consolidated so the three things that are easy to get subtly wrong on mobile
- * live in exactly one place:
+ * It presents itself the way each platform expects: a bottom sheet on a phone,
+ * where the thumb is at the bottom of the screen, and a centred dialog on a
+ * desktop viewport, where a form pinned to the bottom edge of a 27" monitor
+ * looks broken. Both are the same component so a form written once behaves
+ * correctly in both places.
+ *
+ * Three things that are easy to get subtly wrong on mobile live here, once:
  *
  * 1. **Height tracks the *visible* viewport, not the layout viewport.**
  *    react-native-web renders `Modal` as a `position: fixed` overlay, which
@@ -54,6 +64,7 @@ const COMPACT_MAX_HEIGHT_RATIO = 0.84;
 export function BottomSheet({
   visible,
   title,
+  subtitle,
   onClose,
   footer,
   body = 'padded',
@@ -63,7 +74,7 @@ export function BottomSheet({
   const compact = useCompactLayout();
   const insets = useSafeAreaInsets();
   const visualViewport = useVisualViewport();
-  const sheetSpacing = compact ? spacing.md : spacing.lg;
+  const sheetSpacing = compact ? spacing.lg : spacing.xl;
   const maxHeightRatio = compact ? COMPACT_MAX_HEIGHT_RATIO : MAX_HEIGHT_RATIO;
 
   // Reason (1). Null on native and on browsers without visualViewport, where
@@ -80,7 +91,7 @@ export function BottomSheet({
       : { flex: 1 };
 
   // Reason (3). Only the last element carries it, so it is never doubled.
-  const safeBottom = Math.max(sheetSpacing, insets.bottom);
+  const safeBottom = compact ? Math.max(sheetSpacing, insets.bottom) : sheetSpacing;
 
   return (
     <Modal
@@ -93,13 +104,22 @@ export function BottomSheet({
       onRequestClose={onClose}
       accessibilityViewIsModal
     >
-      <View style={[scrim, { backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }]}>
+      <View
+        style={[
+          scrim,
+          {
+            backgroundColor: theme.colors.scrim,
+            justifyContent: compact ? 'flex-end' : 'center',
+            alignItems: compact ? 'stretch' : 'center',
+          },
+        ]}
+      >
         {/* Tapping the scrim dismisses, matching the platform convention. */}
         <Pressable
           accessibilityLabel="Close"
           accessibilityRole="button"
           onPress={onClose}
-          style={{ flex: 1 }}
+          style={compact ? { flex: 1 } : { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
         <KeyboardAvoidingView
           // `padding` makes the entire sheet rise by the keyboard height on
@@ -108,49 +128,79 @@ export function BottomSheet({
           behavior={Platform.OS === 'ios' ? 'height' : undefined}
           style={{
             maxHeight: `${maxHeightRatio * 100}%`,
-            marginHorizontal: compact ? spacing.sm : 0,
+            width: compact ? undefined : DIALOG_WIDTH,
+            maxWidth: '100%',
             overflow: 'hidden',
           }}
         >
           {/* Reason (2): shrink to the shell rather than to this content. */}
           <View
-            style={{
-              flexShrink: 1,
-              minHeight: 0,
-              overflow: 'hidden',
-              backgroundColor: theme.colors.background,
-              borderTopLeftRadius: compact ? radius.lg : radius.xl,
-              borderTopRightRadius: compact ? radius.lg : radius.xl,
-              borderTopWidth: 1,
-              borderColor: theme.colors.border,
-            }}
+            style={[
+              {
+                flexShrink: 1,
+                minHeight: 0,
+                overflow: 'hidden',
+                backgroundColor: theme.colors.background,
+                borderTopLeftRadius: radius.xl,
+                borderTopRightRadius: radius.xl,
+                borderBottomLeftRadius: compact ? 0 : radius.xl,
+                borderBottomRightRadius: compact ? 0 : radius.xl,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              },
+              elevation('xl', theme.mode),
+            ]}
           >
+            {compact ? (
+              // Grab handle: the universal "this panel drags down" signal.
+              <View style={{ alignItems: 'center', paddingTop: spacing.sm }}>
+                <View
+                  accessible={false}
+                  style={{
+                    width: 40,
+                    height: 4,
+                    borderRadius: radius.full,
+                    backgroundColor: theme.colors.borderStrong,
+                  }}
+                />
+              </View>
+            ) : null}
+
             <View
               style={{
                 flexDirection: 'row',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 justifyContent: 'space-between',
+                gap: spacing.md,
                 padding: sheetSpacing,
-                borderBottomWidth: 1,
-                borderBottomColor: theme.colors.border,
+                paddingBottom: spacing.md,
               }}
             >
-              <ThemedText variant="subtitle" accessibilityRole="header">
-                {title}
-              </ThemedText>
+              <View style={{ flex: 1, gap: spacing.xxs, minWidth: 0 }}>
+                <ThemedText variant="subtitle" accessibilityRole="header">
+                  {title}
+                </ThemedText>
+                {subtitle ? (
+                  <ThemedText variant="caption" tone="muted">
+                    {subtitle}
+                  </ThemedText>
+                ) : null}
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close"
                 onPress={onClose}
                 hitSlop={12}
-                style={{
-                  minWidth: minTouchTarget,
-                  minHeight: minTouchTarget,
-                  alignItems: 'flex-end',
+                style={({ pressed }) => ({
+                  width: minTouchTarget - spacing.sm,
+                  height: minTouchTarget - spacing.sm,
+                  borderRadius: radius.full,
+                  alignItems: 'center',
                   justifyContent: 'center',
-                }}
+                  backgroundColor: pressed ? theme.colors.surfaceAlt : 'transparent',
+                })}
               >
-                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+                <Ionicons name="close" size={20} color={theme.colors.textMuted} />
               </Pressable>
             </View>
 
@@ -161,8 +211,9 @@ export function BottomSheet({
                 body === 'flush'
                   ? { paddingBottom: footer ? 0 : safeBottom }
                   : {
-                      padding: sheetSpacing,
-                      gap: sheetSpacing,
+                      paddingHorizontal: sheetSpacing,
+                      paddingTop: spacing.xs,
+                      gap: spacing.lg,
                       paddingBottom: footer ? sheetSpacing : safeBottom,
                     }
               }
@@ -179,9 +230,11 @@ export function BottomSheet({
                   flexDirection: 'row',
                   gap: spacing.md,
                   padding: sheetSpacing,
+                  paddingTop: spacing.md,
                   paddingBottom: safeBottom,
                   borderTopWidth: 1,
                   borderTopColor: theme.colors.border,
+                  backgroundColor: theme.colors.surface,
                 }}
               >
                 {footer}

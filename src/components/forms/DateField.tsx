@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { spacing, transition } from '@/constants/theme';
+import { Field, inputSurface, inputText } from '@/components/forms/Field';
+import { Chip } from '@/components/forms/OptionGroup';
 import { addDays, formatIsoDate, isIsoDate, type IsoDate } from '@/utils/date';
 
 export interface DateFieldProps {
@@ -13,6 +15,7 @@ export interface DateFieldProps {
   /** "Today" relative to the user's timezone — see `useToday`. */
   today: IsoDate;
   clearable?: boolean;
+  error?: string | null;
 }
 
 /**
@@ -25,8 +28,9 @@ export interface DateFieldProps {
  * stores, so nothing is lost in translation. Invalid text is simply not
  * committed, leaving the previous value intact.
  */
-export function DateField({ label, value, onChange, today, clearable = true }: DateFieldProps) {
+export function DateField({ label, value, onChange, today, clearable = true, error }: DateFieldProps) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
 
   // The text box holds a partial value while it is being typed ("2026-07-2"
   // is not yet a date), so it needs its own state; it re-syncs whenever the
@@ -42,68 +46,52 @@ export function DateField({ label, value, onChange, today, clearable = true }: D
   ];
 
   return (
-    <View style={{ gap: spacing.xs }}>
-      <ThemedText variant="label" tone="muted">
-        {label}
-      </ThemedText>
-
+    <Field
+      label={label}
+      error={error}
+      helpText={value ? formatIsoDate(value) : 'Pick a shortcut, or type a date as YYYY-MM-DD.'}
+    >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {presets.map((preset) => {
-          const selected = preset.date === value;
-          return (
-            <Pressable
-              key={preset.label}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              onPress={() => onChange(preset.date)}
-              style={{
-                minHeight: minTouchTarget,
-                paddingHorizontal: spacing.md,
-                justifyContent: 'center',
-                borderRadius: radius.full,
-                borderWidth: 1,
-                borderColor: selected ? theme.colors.primary : theme.colors.border,
-                backgroundColor: selected ? theme.colors.accentSurface : theme.colors.surface,
-              }}
-            >
-              <ThemedText variant="label" tone={selected ? 'primary' : 'default'}>
-                {preset.label}
-              </ThemedText>
-            </Pressable>
-          );
-        })}
+        {presets.map((preset) => (
+          <Chip
+            key={preset.label}
+            label={preset.label}
+            size="sm"
+            selected={preset.date === value}
+            onPress={() => onChange(preset.date)}
+          />
+        ))}
       </View>
 
-      <TextInput
-        accessibilityLabel={`${label}, as year-month-day`}
-        value={draft}
-        onChangeText={(text) => {
-          setDraft(text);
-          if (text === '') onChange(null);
-          else if (isIsoDate(text)) onChange(text);
-        }}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={theme.colors.textMuted}
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={{
-          minHeight: minTouchTarget,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          borderRadius: radius.md,
-          paddingHorizontal: spacing.md,
-          color: theme.colors.text,
-          backgroundColor: theme.colors.surface,
-          // Below 16px, iOS Safari zooms the whole page in on focus.
-          fontSize: fontSize.md,
-        }}
-      />
-
-      {value ? (
-        <ThemedText variant="caption" tone="muted">
-          {formatIsoDate(value)}
-        </ThemedText>
-      ) : null}
-    </View>
+      <View
+        style={[
+          inputSurface(theme, { focused, invalid: Boolean(error) }),
+          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+          transition(),
+        ]}
+      >
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color={focused ? theme.colors.primary : theme.colors.textMuted}
+        />
+        <TextInput
+          accessibilityLabel={`${label}, as year-month-day`}
+          value={draft}
+          onChangeText={(text) => {
+            setDraft(text);
+            if (text === '') onChange(null);
+            else if (isIsoDate(text)) onChange(text);
+          }}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={theme.colors.textSubtle}
+          autoCapitalize="none"
+          autoCorrect={false}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={inputText(theme)}
+        />
+      </View>
+    </Field>
   );
 }

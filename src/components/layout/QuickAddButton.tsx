@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/hooks/useTheme';
-import { useCompactLayout } from '@/hooks/useCompactLayout';
 import { useHover } from '@/hooks/useHover';
 import { elevation, minTouchTarget, radius, spacing, transition } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -13,10 +12,20 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { FormSheet } from '@/components/ui/FormSheet';
 import { TextField } from '@/components/forms/TextField';
 import { SegmentedControl } from '@/components/forms/SegmentedControl';
+import { useNavStore } from '@/stores/nav-store';
 import { useToday } from '@/hooks/useToday';
 import { useQuickAdd } from '@/features/quick-add/api';
 
 type QuickKind = 'task' | 'note';
+
+export interface QuickAddButtonProps {
+  /**
+   * `floating` is the phone treatment — a circular button above the tab bar.
+   * `sidebar` is the desktop one, where a floating button would sit on top of
+   * the right-hand column of every table, which is exactly where amounts are.
+   */
+  placement?: 'floating' | 'sidebar';
+}
 
 /**
  * A floating "＋" available on every screen, for capturing a task or note in
@@ -26,11 +35,11 @@ type QuickKind = 'task' | 'note';
  * subway platform is saved instantly and synced later — the whole point of a
  * quick-add is that it must never fail because the network did.
  */
-export function QuickAddButton() {
+export function QuickAddButton({ placement = 'floating' }: QuickAddButtonProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const compact = useCompactLayout();
   const { hovered, hoverProps } = useHover();
+  const sidebarCollapsed = useNavStore((state) => state.sidebarCollapsed);
   const { today } = useToday();
   const { addTask, addNote } = useQuickAdd();
 
@@ -62,11 +71,37 @@ export function QuickAddButton() {
     close();
   };
 
-  // Clear the mobile tab bar; sit in the normal margin on desktop.
-  const bottom = (compact ? minTouchTarget + spacing.xl : spacing.xl) + insets.bottom;
+  // Clear the mobile tab bar and the home indicator.
+  const bottom = minTouchTarget + spacing.xl + insets.bottom;
 
-  return (
-    <>
+  const trigger =
+    placement === 'sidebar' ? (
+      // Collapsed to icons, the label would not fit — but the action still has
+      // to be reachable, so it keeps its accessible name.
+      sidebarCollapsed ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Quick add a task or note"
+          onPress={() => setOpen(true)}
+          {...hoverProps}
+          style={({ pressed }) => [
+            {
+              height: minTouchTarget,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: radius.md,
+              backgroundColor: hovered ? theme.colors.primaryHover : theme.colors.primary,
+              transform: pressed ? [{ scale: 0.96 }] : undefined,
+            },
+            transition(),
+          ]}
+        >
+          <Ionicons name="add" size={22} color={theme.colors.primaryText} />
+        </Pressable>
+      ) : (
+        <Button label="Quick add" icon="add" fullWidth onPress={() => setOpen(true)} />
+      )
+    ) : (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Quick add a task or note"
@@ -75,33 +110,27 @@ export function QuickAddButton() {
         style={({ pressed }) => [
           {
             position: 'absolute',
-            right: compact ? spacing.lg : spacing.xl,
+            right: spacing.lg,
             bottom,
-            flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.sm,
+            justifyContent: 'center',
             height: 56,
-            // Grows into a labelled pill on desktop, where there is room for
-            // it and no bottom bar competing for attention.
-            paddingHorizontal: compact ? 0 : spacing.lg,
-            width: compact ? 56 : undefined,
+            width: 56,
             borderRadius: radius.full,
             backgroundColor: hovered ? theme.colors.primaryHover : theme.colors.primary,
-            alignSelf: 'flex-start',
-            justifyContent: 'center',
             transform: pressed ? [{ scale: 0.94 }] : undefined,
           },
           elevation('lg', theme.mode),
           transition(),
         ]}
       >
-        <Ionicons name="add" size={compact ? 30 : 22} color={theme.colors.primaryText} />
-        {compact ? null : (
-          <ThemedText variant="label" weight="semibold" style={{ color: theme.colors.primaryText }}>
-            Quick add
-          </ThemedText>
-        )}
+        <Ionicons name="add" size={30} color={theme.colors.primaryText} />
       </Pressable>
+    );
+
+  return (
+    <>
+      {trigger}
 
       <FormSheet
         visible={open}

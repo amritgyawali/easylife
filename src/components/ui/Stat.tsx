@@ -29,6 +29,7 @@ export interface StatProps {
  */
 export function Stat({ label, value, tone = 'default', hint, icon, delta }: StatProps) {
   const theme = useTheme();
+  const compact = useCompactLayout();
 
   return (
     <View style={{ flex: 1, minWidth: 120, gap: spacing.xs }}>
@@ -39,7 +40,17 @@ export function Stat({ label, value, tone = 'default', hint, icon, delta }: Stat
         </ThemedText>
       </View>
 
-      <ThemedText variant="metric" tone={tone} numeric numberOfLines={1} adjustsFontSizeToFit>
+      {/* Two stats sit side by side on a 360px phone, which leaves ~150px for
+          a value like "NPR 185,000.00". `adjustsFontSizeToFit` is iOS-only, so
+          relying on it truncated the amount on web and Android instead of
+          shrinking it — the size steps down explicitly here instead. */}
+      <ThemedText
+        variant={compact ? 'subtitle' : 'metric'}
+        weight="bold"
+        tone={tone}
+        numeric
+        numberOfLines={1}
+      >
         {value}
       </ThemedText>
 
@@ -175,7 +186,7 @@ export function HeroStat({
       <ThemedText variant="overline" tone="muted">
         {label}
       </ThemedText>
-      <ThemedText variant="display" tone={tone} numeric adjustsFontSizeToFit numberOfLines={1}>
+      <ThemedText variant="display" tone={tone} numeric numberOfLines={1}>
         {value}
       </ThemedText>
       {hint ? (

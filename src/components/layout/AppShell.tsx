@@ -36,7 +36,6 @@ export function AppShell({ children }: PropsWithChildren) {
   return (
     <View style={{ flex: 1 }}>
       {compact ? <MobileShell>{children}</MobileShell> : <DesktopShell>{children}</DesktopShell>}
-      <QuickAddButton />
     </View>
   );
 }
@@ -79,6 +78,15 @@ function DesktopShell({ children }: PropsWithChildren) {
               {APP_NAME}
             </ThemedText>
           )}
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: collapsed ? spacing.sm : spacing.md,
+            paddingBottom: spacing.md,
+          }}
+        >
+          <QuickAddButton placement="sidebar" />
         </View>
 
         <ScrollView
@@ -336,6 +344,8 @@ function MobileShell({ children }: PropsWithChildren) {
           onPress={() => setMoreOpen(true)}
         />
       </View>
+
+      <QuickAddButton />
 
       <MoreMenuSheet visible={moreOpen} onClose={() => setMoreOpen(false)} />
     </View>

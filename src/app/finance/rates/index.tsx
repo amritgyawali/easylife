@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { DataTable } from '@/components/ui/DataTable';
 import { IconButton } from '@/components/ui/IconButton';
 import { FormSheet } from '@/components/ui/FormSheet';
 import { TextField } from '@/components/forms/TextField';
@@ -47,7 +46,7 @@ export default function ExchangeRatesScreen() {
         <ScreenHeader
           title="Exchange rates"
           subtitle="Entered by hand — there is no live rate feed."
-          action={<Button label="Add rate" size="sm" onPress={() => setSheetOpen(true)} />}
+          action={<Button label="Add rate" icon="add" size="sm" onPress={() => setSheetOpen(true)} />}
         />
       }
     >
@@ -57,39 +56,57 @@ export default function ExchangeRatesScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (rates?.length ?? 0) === 0 ? (
         <EmptyState
+          icon="swap-horizontal-outline"
           title="No rates recorded"
           description="Without a rate, totals in other currencies are listed separately instead of being combined."
           actionLabel="Add rate"
           onAction={() => setSheetOpen(true)}
         />
       ) : (
-        <Card padded={false}>
-          {rates?.map((rate) => (
-            <View
-              key={rate.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.sm,
-                paddingLeft: spacing.md,
-              }}
-            >
-              <View style={{ flex: 1, gap: spacing.xxs, paddingVertical: spacing.sm }}>
-                <ThemedText variant="body">
-                  1 {rate.from_currency} = {rate.rate} {rate.to_currency}
+        <DataTable
+          data={rates ?? []}
+          keyExtractor={(rate) => rate.id}
+          accessibilityLabel="Recorded exchange rates"
+          columns={[
+            {
+              key: 'pair',
+              header: 'Pair',
+              compact: 'title',
+              flex: 1.2,
+              render: (rate) => `${rate.from_currency} → ${rate.to_currency}`,
+            },
+            {
+              key: 'rate',
+              header: 'Rate',
+              numeric: true,
+              render: (rate) => (
+                <ThemedText variant="body" weight="semibold" numeric numberOfLines={1}>
+                  {rate.rate}
                 </ThemedText>
-                <ThemedText variant="caption" tone="muted">
-                  As of {formatIsoDate(rate.as_of_date)}
-                </ThemedText>
-              </View>
-              <IconButton
-                icon="trash-outline"
-                accessibilityLabel={`Delete rate ${rate.from_currency} to ${rate.to_currency}`}
-                onPress={() => deleteRate.mutate(rate.id)}
-              />
-            </View>
-          ))}
-        </Card>
+              ),
+            },
+            {
+              key: 'asOf',
+              header: 'As of',
+              numeric: true,
+              render: (rate) => formatIsoDate(rate.as_of_date),
+            },
+            {
+              key: 'actions',
+              header: '',
+              width: 52,
+              align: 'right',
+              render: (rate) => (
+                <IconButton
+                  icon="trash-outline"
+                  accessibilityLabel={`Delete rate ${rate.from_currency} to ${rate.to_currency}`}
+                  onPress={() => deleteRate.mutate(rate.id)}
+                  size={17}
+                />
+              ),
+            },
+          ]}
+        />
       )}
 
       <RateFormSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />

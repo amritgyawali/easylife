@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ListRow } from '@/components/ui/ListRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -78,7 +79,14 @@ export default function DocumentsScreen() {
           <ScreenHeader
             title="Documents"
             subtitle="Stored privately. Identical files are recognised, never uploaded twice. Open one in the Reader to read it without downloading it."
-            action={<Button label="Add file" size="sm" onPress={() => void handlePick('file')} />}
+            action={
+              <Button
+                label="Add file"
+                icon="cloud-upload-outline"
+                size="sm"
+                onPress={() => void handlePick('file')}
+              />
+            }
           />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {Platform.OS !== 'web' ? (
@@ -107,6 +115,7 @@ export default function DocumentsScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon={query ? 'search-outline' : 'folder-open-outline'}
           title={query ? 'No matching documents' : 'Nothing stored yet'}
           description={
             query
@@ -117,48 +126,55 @@ export default function DocumentsScreen() {
           onAction={query ? undefined : () => void handlePick('file')}
         />
       ) : (
-        matching.map((document) => (
-          <Card key={document.id} style={{ gap: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-              <View style={{ flex: 1, gap: spacing.xxs }}>
-                <ThemedText variant="subtitle" numberOfLines={1}>
-                  {document.title}
-                </ThemedText>
-                <ThemedText variant="caption" tone="muted">
-                  {formatFileSize(document.file_size_bytes)}
-                  {document.institution ? ` · ${document.institution}` : ''}
-                  {document.document_date ? ` · ${formatIsoDate(document.document_date)}` : ''}
-                </ThemedText>
-              </View>
-              <IconButton
-                icon="reader-outline"
-                tone="primary"
-                accessibilityLabel={`Read ${document.title} in the app`}
-                onPress={() => router.push({ pathname: '/reader', params: { documentId: document.id } })}
-              />
-              <IconButton
-                icon="open-outline"
-                accessibilityLabel={`Open ${document.title} outside the app`}
-                onPress={() => void openDocument(document)}
-              />
-              <IconButton
-                icon="trash-outline"
-                accessibilityLabel={`Delete ${document.title}`}
-                onPress={() => deleteDocument.mutate(document)}
-              />
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Badge label={document.document_type.replace(/_/g, ' ')} />
-              {document.extraction_status ? (
-                <Badge
-                  label={document.extraction_status.replace(/_/g, ' ')}
-                  tone={document.extraction_status === 'confirmed' ? 'positive' : 'warning'}
-                />
-              ) : null}
-            </View>
-          </Card>
-        ))
+        <Card padded={false}>
+          {matching.map((document, index) => (
+            <ListRow
+              key={document.id}
+              divider={index > 0}
+              icon="document-outline"
+              iconTone="primary"
+              title={document.title}
+              subtitle={`${formatFileSize(document.file_size_bytes)}${
+                document.institution ? ` · ${document.institution}` : ''
+              }${document.document_date ? ` · ${formatIsoDate(document.document_date)}` : ''}`}
+              meta={
+                <>
+                  <Badge label={document.document_type.replace(/_/g, ' ')} size="sm" />
+                  {document.extraction_status ? (
+                    <Badge
+                      label={document.extraction_status.replace(/_/g, ' ')}
+                      tone={document.extraction_status === 'confirmed' ? 'positive' : 'warning'}
+                      size="sm"
+                    />
+                  ) : null}
+                </>
+              }
+              trailing={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
+                  <IconButton
+                    icon="reader-outline"
+                    tone="primary"
+                    accessibilityLabel={`Read ${document.title} in the app`}
+                    onPress={() => router.push({ pathname: '/reader', params: { documentId: document.id } })}
+                    size={17}
+                  />
+                  <IconButton
+                    icon="open-outline"
+                    accessibilityLabel={`Open ${document.title} outside the app`}
+                    onPress={() => void openDocument(document)}
+                    size={17}
+                  />
+                  <IconButton
+                    icon="trash-outline"
+                    accessibilityLabel={`Delete ${document.title}`}
+                    onPress={() => deleteDocument.mutate(document)}
+                    size={17}
+                  />
+                </View>
+              }
+            />
+          ))}
+        </Card>
       )}
 
       <UploadSheet file={pickedFile} onClose={() => setPickedFile(null)} />

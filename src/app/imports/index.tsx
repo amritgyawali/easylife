@@ -48,7 +48,14 @@ export default function ImportsScreen() {
         <ScreenHeader
           title="Imports"
           subtitle="Bring a bank or wallet statement in. Nothing is added to your ledger until you confirm it."
-          action={<Button label="New import" size="sm" onPress={() => setWizardOpen(true)} />}
+          action={
+            <Button
+              label="New import"
+              icon="cloud-upload-outline"
+              size="sm"
+              onPress={() => setWizardOpen(true)}
+            />
+          }
         />
       }
     >
@@ -58,6 +65,7 @@ export default function ImportsScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : sorted.length === 0 ? (
         <EmptyState
+          icon="cloud-upload-outline"
           title="No imports yet"
           description="Export a CSV statement from your bank or wallet and bring it in here."
           actionLabel="New import"

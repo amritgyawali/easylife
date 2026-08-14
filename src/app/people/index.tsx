@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -108,7 +109,7 @@ export default function PeopleScreen() {
           <ScreenHeader
             title="People"
             subtitle="Everyone money moves between, and where you stand with each."
-            action={<Button label="Add person" size="sm" onPress={() => openSheet(null)} />}
+            action={<Button label="Add person" icon="add" size="sm" onPress={() => openSheet(null)} />}
           />
           <SearchInput value={query} onChangeText={setQuery} placeholder="Search people" />
         </>
@@ -120,6 +121,7 @@ export default function PeopleScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon={query ? 'search-outline' : 'people-outline'}
           title={query ? 'No matching people' : 'No people yet'}
           description={
             query
@@ -135,7 +137,8 @@ export default function PeopleScreen() {
 
           return (
             <Card key={person.id} style={{ gap: spacing.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <Avatar name={person.display_name} size={42} />
                 <View style={{ flex: 1, gap: spacing.xxs }}>
                   <ThemedText variant="subtitle">{person.display_name}</ThemedText>
                   {person.phone || person.email ? (
@@ -177,12 +180,18 @@ export default function PeopleScreen() {
               )}
 
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignItems: 'center' }}>
-                <Badge label={person.kind} />
+                <Badge label={person.kind} size="sm" />
                 {(transactionCount.get(person.id) ?? 0) > 0 ? (
-                  <Badge label={`${transactionCount.get(person.id)} transactions`} tone="primary" />
+                  <Badge label={`${transactionCount.get(person.id)} transactions`} tone="primary" size="sm" />
                 ) : null}
                 <View style={{ flex: 1 }} />
-                <Button label="New loan" size="sm" variant="ghost" onPress={() => setLoanFor(person.id)} />
+                <Button
+                  label="New loan"
+                  icon="add"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => setLoanFor(person.id)}
+                />
               </View>
             </Card>
           );

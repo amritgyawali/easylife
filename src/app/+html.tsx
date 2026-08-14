@@ -32,8 +32,8 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* Matches src/constants/theme.ts background colors so the browser
             chrome/PWA title bar never flashes the wrong color on load. */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8F9FB" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101828" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F6F8FC" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B111C" />
 
         {/* Expo's own build step auto-generates /favicon.ico from app.json's
             web.favicon and injects its own <link rel="icon">, so only the
@@ -50,6 +50,52 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="mobile-web-app-capable" content="yes" />
 
         <ScrollViewStyleReset />
+
+        {/* Browser-level polish react-native-web can't express as component
+            styles: text rendering, the page's own background during load
+            (before React paints), scrollbar treatment, and suppressing the
+            grey tap flash and rubber-band overscroll that make an installed
+            PWA feel like a web page rather than an app. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root { color-scheme: light dark; }
+              html { background-color: #F6F8FC; }
+              @media (prefers-color-scheme: dark) { html { background-color: #0B111C; } }
+              body {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                text-rendering: optimizeLegibility;
+                overscroll-behavior-y: none;
+              }
+              * { -webkit-tap-highlight-color: transparent; }
+              ::selection { background-color: rgba(79, 90, 232, 0.22); }
+              * { scrollbar-width: thin; scrollbar-color: #CBD2E0 transparent; }
+              @media (prefers-color-scheme: dark) {
+                * { scrollbar-color: #3A4560 transparent; }
+              }
+              ::-webkit-scrollbar { width: 10px; height: 10px; }
+              ::-webkit-scrollbar-track { background: transparent; }
+              ::-webkit-scrollbar-thumb {
+                background-color: #CBD2E0;
+                border-radius: 999px;
+                border: 3px solid transparent;
+                background-clip: content-box;
+              }
+              ::-webkit-scrollbar-thumb:hover { background-color: #98A2B8; background-clip: content-box; }
+              @media (prefers-color-scheme: dark) {
+                ::-webkit-scrollbar-thumb { background-color: #3A4560; background-clip: content-box; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                *, *::before, *::after {
+                  animation-duration: 0.01ms !important;
+                  animation-iteration-count: 1 !important;
+                  transition-duration: 0.01ms !important;
+                }
+              }
+            `,
+          }}
+        />
 
         {/* Registered after `load` so it never competes with the initial
             render for bandwidth/CPU; scoped to same-origin GET requests only

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/useTheme';
-import { fontSize, minTouchTarget, radius, spacing } from '@/constants/theme';
+import { radius, spacing, transition } from '@/constants/theme';
+import { inputSurface, inputText } from '@/components/forms/Field';
 
 export interface SearchInputProps {
   value: string;
@@ -21,32 +23,34 @@ export function SearchInput({
   autoFocus = false,
 }: SearchInputProps) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
 
   return (
     <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        minHeight: minTouchTarget,
-        paddingHorizontal: spacing.md,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: radius.md,
-        backgroundColor: theme.colors.surface,
-      }}
+      style={[
+        inputSurface(theme, { focused }),
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          borderRadius: radius.full,
+        },
+        transition(),
+      ]}
     >
-      <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+      <Ionicons name="search" size={18} color={focused ? theme.colors.primary : theme.colors.textMuted} />
       <TextInput
         accessibilityLabel={accessibilityLabel}
         autoFocus={autoFocus}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textMuted}
+        placeholderTextColor={theme.colors.textSubtle}
         autoCorrect={false}
         returnKeyType="search"
-        style={{ flex: 1, color: theme.colors.text, paddingVertical: spacing.sm, fontSize: fontSize.md }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={inputText(theme)}
       />
       {value.length > 0 ? (
         <Pressable

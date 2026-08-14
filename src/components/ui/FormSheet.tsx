@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
@@ -6,21 +6,31 @@ export interface FormSheetProps extends PropsWithChildren {
   visible: boolean;
   title: string;
   onClose: () => void;
+  /** One line of context under the title. */
+  subtitle?: string;
   /** Action row pinned below the scrollable body, e.g. Save / Cancel. */
-  footer?: React.ReactNode;
+  footer?: ReactNode;
 }
 
 /**
  * Modal container for every create/edit form in the app.
  *
  * The modal mechanics — keyboard-aware sizing, overflow clipping, safe-area
- * insets — live in `BottomSheet`, which the More menu shares. This stays a
- * named component because "form sheet" is what feature code means, and because
- * it fixes the gutters forms want rather than leaving that to each call site.
+ * insets, and presenting as a dialog rather than a sheet on desktop — live in
+ * `BottomSheet`, which the More menu and `Select` share. This stays a named
+ * component because "form sheet" is what feature code means, and because it
+ * fixes the gutters forms want rather than leaving that to each call site.
  */
-export function FormSheet({ visible, title, onClose, footer, children }: FormSheetProps) {
+export function FormSheet({ visible, title, subtitle, onClose, footer, children }: FormSheetProps) {
   return (
-    <BottomSheet visible={visible} title={title} onClose={onClose} footer={footer} body="padded">
+    <BottomSheet
+      visible={visible}
+      title={title}
+      subtitle={subtitle}
+      onClose={onClose}
+      footer={footer}
+      body="padded"
+    >
       {children}
     </BottomSheet>
   );

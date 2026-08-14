@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -18,7 +17,6 @@ import { useNotes, useUpdateNote, type NoteRow } from '@/features/notes/api';
 import { NoteFormSheet } from '@/features/notes/NoteFormSheet';
 
 export default function NotesScreen() {
-  const theme = useTheme();
   const { data: notes, isLoading, error, refetch, isRefetching } = useNotes();
   const updateNote = useUpdateNote();
 
@@ -52,7 +50,7 @@ export default function NotesScreen() {
           <ScreenHeader
             title="Notes"
             subtitle="Everything you've written down, newest first."
-            action={<Button label="New note" size="sm" onPress={() => openSheet(null)} />}
+            action={<Button label="New note" icon="add" size="sm" onPress={() => openSheet(null)} />}
           />
           <SearchInput value={query} onChangeText={setQuery} placeholder="Search notes" />
         </>
@@ -64,6 +62,7 @@ export default function NotesScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon={query ? 'search-outline' : 'document-text-outline'}
           title={query ? 'No matching notes' : 'No notes yet'}
           description={
             query ? 'Try a different search.' : 'Capture a thought, a meeting, or a journal entry.'
@@ -73,42 +72,42 @@ export default function NotesScreen() {
         />
       ) : (
         matching.map((note) => (
-          <Pressable
+          <Card
             key={note.id}
-            accessibilityRole="button"
             accessibilityLabel={`Open note ${note.title}`}
             onPress={() => openSheet(note)}
+            style={{ gap: spacing.sm }}
           >
-            <Card style={{ gap: spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
-                <ThemedText variant="subtitle" style={{ flex: 1 }} numberOfLines={1}>
-                  {note.title}
-                </ThemedText>
-                <IconButton
-                  icon={note.is_pinned ? 'bookmark' : 'bookmark-outline'}
-                  tone={note.is_pinned ? 'primary' : 'muted'}
-                  accessibilityLabel={note.is_pinned ? `Unpin ${note.title}` : `Pin ${note.title}`}
-                  onPress={() => updateNote.mutate({ id: note.id, isPinned: !note.is_pinned })}
-                />
-              </View>
-
-              {note.content ? (
-                <ThemedText variant="body" tone="muted" numberOfLines={3}>
-                  {note.content}
-                </ThemedText>
-              ) : null}
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                <Badge label={note.note_type} />
-                {note.folder ? <Badge label={note.folder} tone="primary" /> : null}
-                {note.is_pinned ? <Badge label="Pinned" tone="primary" /> : null}
-              </View>
-
-              <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
-                Updated {new Date(note.updated_at).toLocaleString()}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
+              <ThemedText variant="subtitle" style={{ flex: 1 }} numberOfLines={1}>
+                {note.title}
               </ThemedText>
-            </Card>
-          </Pressable>
+              <IconButton
+                icon={note.is_pinned ? 'bookmark' : 'bookmark-outline'}
+                tone={note.is_pinned ? 'primary' : 'muted'}
+                accessibilityLabel={note.is_pinned ? `Unpin ${note.title}` : `Pin ${note.title}`}
+                onPress={() => updateNote.mutate({ id: note.id, isPinned: !note.is_pinned })}
+              />
+            </View>
+
+            {note.content ? (
+              <ThemedText variant="body" tone="muted" numberOfLines={3}>
+                {note.content}
+              </ThemedText>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs }}>
+              <Badge label={note.note_type} size="sm" />
+              {note.folder ? (
+                <Badge label={note.folder} tone="primary" size="sm" icon="folder-outline" />
+              ) : null}
+              {note.is_pinned ? <Badge label="Pinned" tone="primary" size="sm" icon="bookmark" /> : null}
+              <View style={{ flex: 1 }} />
+              <ThemedText variant="caption" tone="subtle">
+                Updated {new Date(note.updated_at).toLocaleDateString()}
+              </ThemedText>
+            </View>
+          </Card>
         ))
       )}
 

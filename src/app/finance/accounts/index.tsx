@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useState, type ComponentProps } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
 import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
+import { Section } from '@/components/ui/Section';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { ListRow } from '@/components/ui/ListRow';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { formatMoney } from '@/utils/money';
 import { useAccountBalances } from '@/features/finance/use-balances';
@@ -39,7 +42,7 @@ export default function AccountsScreen() {
         <ScreenHeader
           title="Accounts"
           subtitle="Balances are derived from your ledger, never typed in."
-          action={<Button label="Add account" size="sm" onPress={() => openSheet(null)} />}
+          action={<Button label="Add account" icon="add" size="sm" onPress={() => openSheet(null)} />}
         />
       }
     >
@@ -49,6 +52,7 @@ export default function AccountsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : accounts.length === 0 ? (
         <EmptyState
+          icon="card-outline"
           title="No accounts yet"
           description="Add the cash, bank or wallet accounts you actually use."
           actionLabel="Add account"
@@ -58,46 +62,56 @@ export default function AccountsScreen() {
         <>
           <NetWorthCard />
 
-          <Card style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold">
-              IN ACCOUNTS
+          <Card style={{ gap: spacing.md }}>
+            <ThemedText variant="overline" tone="muted" accessibilityRole="header">
+              In accounts
             </ThemedText>
             {netWorthByCurrency.size === 0 ? (
               <ThemedText variant="body" tone="muted">
                 No accounts count towards net worth yet.
               </ThemedText>
             ) : (
-              [...netWorthByCurrency.entries()].map(([currency, total]) => (
-                <ThemedText key={currency} variant="subtitle" tone={total < 0 ? 'negative' : 'default'}>
-                  {formatMoney(total, currency)}
-                </ThemedText>
-              ))
+              <StatRow>
+                {[...netWorthByCurrency.entries()].map(([currency, total]) => (
+                  <Stat
+                    key={currency}
+                    label={currency}
+                    value={formatMoney(total, currency)}
+                    tone={total < 0 ? 'negative' : 'default'}
+                  />
+                ))}
+              </StatRow>
             )}
           </Card>
 
-          {active.map(({ account, balanceMinor }) => (
-            <AccountCard
-              key={account.id}
-              account={account}
-              balanceMinor={balanceMinor}
-              onPress={() => openSheet(account)}
-            />
-          ))}
-
-          {archived.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                ARCHIVED
-              </ThemedText>
-              {archived.map(({ account, balanceMinor }) => (
-                <AccountCard
+          <Section title="Open accounts" count={active.length}>
+            <Card padded={false}>
+              {active.map(({ account, balanceMinor }, index) => (
+                <AccountRowItem
                   key={account.id}
                   account={account}
                   balanceMinor={balanceMinor}
+                  divider={index > 0}
                   onPress={() => openSheet(account)}
                 />
               ))}
-            </View>
+            </Card>
+          </Section>
+
+          {archived.length > 0 ? (
+            <Section title="Archived" count={archived.length}>
+              <Card padded={false}>
+                {archived.map(({ account, balanceMinor }, index) => (
+                  <AccountRowItem
+                    key={account.id}
+                    account={account}
+                    balanceMinor={balanceMinor}
+                    divider={index > 0}
+                    onPress={() => openSheet(account)}
+                  />
+                ))}
+              </Card>
+            </Section>
           ) : null}
         </>
       )}
@@ -107,39 +121,51 @@ export default function AccountsScreen() {
   );
 }
 
-function AccountCard({
+/** Icon that matches what the account actually is, at a glance. */
+const ACCOUNT_ICON: Record<string, ComponentProps<typeof Ionicons>['name']> = {
+  cash: 'cash-outline',
+  bank: 'business-outline',
+  wallet: 'wallet-outline',
+  credit_card: 'card-outline',
+  savings: 'save-outline',
+  investment: 'trending-up-outline',
+  loan: 'document-text-outline',
+};
+
+function AccountRowItem({
   account,
   balanceMinor,
+  divider,
   onPress,
 }: {
   account: AccountRow;
   balanceMinor: number;
+  divider: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${account.name}`} onPress={onPress}>
-      <Card style={{ gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-          <View style={{ flex: 1, gap: spacing.xxs }}>
-            <ThemedText variant="subtitle">{account.name}</ThemedText>
-            {account.institution ? (
-              <ThemedText variant="caption" tone="muted">
-                {account.institution}
-              </ThemedText>
-            ) : null}
-          </View>
-          <ThemedText variant="subtitle" tone={balanceMinor < 0 ? 'negative' : 'default'}>
-            {formatMoney(balanceMinor, account.currency)}
-          </ThemedText>
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-          <Badge label={account.account_type.replace(/_/g, ' ')} />
-          <Badge label={account.currency} />
-          {!account.include_in_net_worth ? <Badge label="Excluded from net worth" tone="warning" /> : null}
-          {account.archived_at ? <Badge label="Archived" tone="neutral" /> : null}
-        </View>
-      </Card>
-    </Pressable>
+    <ListRow
+      divider={divider}
+      onPress={onPress}
+      icon={ACCOUNT_ICON[account.account_type] ?? 'wallet-outline'}
+      iconTone={account.archived_at ? 'neutral' : 'primary'}
+      title={account.name}
+      subtitle={account.institution ?? undefined}
+      meta={
+        <>
+          <Badge label={account.account_type.replace(/_/g, ' ')} size="sm" />
+          <Badge label={account.currency} size="sm" />
+          {!account.include_in_net_worth ? (
+            <Badge label="Excluded from net worth" tone="warning" size="sm" />
+          ) : null}
+          {account.archived_at ? <Badge label="Archived" size="sm" /> : null}
+        </>
+      }
+      trailing={
+        <ThemedText variant="body" weight="semibold" tone={balanceMinor < 0 ? 'negative' : 'default'} numeric>
+          {formatMoney(balanceMinor, account.currency)}
+        </ThemedText>
+      }
+    />
   );
 }

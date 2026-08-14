@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,7 +9,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { ThemedText } from '@/components/ui/ThemedText';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Section } from '@/components/ui/Section';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { ListRow } from '@/components/ui/ListRow';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useToday } from '@/hooks/useToday';
 import { useProfile } from '@/features/auth/useProfile';
@@ -105,7 +107,7 @@ export default function TodayScreen() {
         <ScreenHeader
           title={firstName ? `Hello, ${firstName}` : 'Today'}
           subtitle={formatIsoDate(today)}
-          action={<Button label="Add task" size="sm" onPress={() => setSheetOpen(true)} />}
+          action={<Button label="Add task" icon="add" size="sm" onPress={() => setSheetOpen(true)} />}
         />
       }
     >
@@ -115,23 +117,36 @@ export default function TodayScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : (
         <>
-          <Card style={{ flexDirection: 'row', gap: spacing.lg }}>
-            <Stat label="Due today" value={String(dueToday.length)} />
-            <Stat label="Completed" value={String(doneToday.length)} />
-            <Stat label="Events" value={String(todaysEvents.length)} />
+          <Card>
+            <StatRow>
+              <Stat label="Due today" value={String(dueToday.length)} icon="time-outline" />
+              <Stat
+                label="Completed"
+                value={String(doneToday.length)}
+                tone={doneToday.length > 0 ? 'positive' : 'default'}
+                icon="checkmark-circle-outline"
+              />
+              <Stat label="Events" value={String(todaysEvents.length)} icon="calendar-outline" />
+            </StatRow>
           </Card>
 
           {todaysEvents.length > 0 ? (
-            <Section title="Agenda">
+            <Section title="Agenda" count={todaysEvents.length}>
               <Card padded={false}>
-                {todaysEvents.map((event) => (
-                  <View key={event.id} style={{ padding: spacing.md, gap: spacing.xs }}>
-                    <ThemedText variant="body">{event.title}</ThemedText>
-                    <Badge
-                      label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
-                      tone="primary"
-                    />
-                  </View>
+                {todaysEvents.map((event, index) => (
+                  <ListRow
+                    key={event.id}
+                    divider={index > 0}
+                    icon="calendar-outline"
+                    iconTone="primary"
+                    title={event.title}
+                    trailing={
+                      <Badge
+                        label={event.all_day ? 'All day' : formatInstantTime(event.starts_at, timeZone)}
+                        tone="primary"
+                      />
+                    }
+                  />
                 ))}
               </Card>
             </Section>
@@ -139,76 +154,74 @@ export default function TodayScreen() {
 
           <Section
             title="Tasks"
+            count={dueToday.length}
             action={
               <Button label="See all" size="sm" variant="ghost" onPress={() => router.push('/tasks')} />
             }
           >
-            {dueToday.length === 0 ? (
-              <Card>
-                <ThemedText variant="body" tone="muted">
-                  Nothing is due today.
-                </ThemedText>
-              </Card>
-            ) : (
-              <Card padded={false}>
-                {dueToday.map((task) => (
+            <Card padded={false}>
+              {dueToday.length === 0 ? (
+                <EmptyState
+                  size="inline"
+                  icon="checkmark-done-outline"
+                  title="Nothing is due today"
+                  description="Anything overdue would appear here too."
+                  actionLabel="Add a task"
+                  onAction={() => setSheetOpen(true)}
+                />
+              ) : (
+                dueToday.map((task, index) => (
                   <TaskListItem
                     key={task.id}
                     task={task}
                     today={today}
+                    divider={index > 0}
                     onToggle={(value) => toggleComplete.mutate({ id: task.id, completed: value })}
                     onPress={() => {
                       setEditing(task);
                       setSheetOpen(true);
                     }}
                   />
-                ))}
-              </Card>
-            )}
+                ))
+              )}
+            </Card>
           </Section>
 
           {habitsDueToday.length > 0 ? (
             <Section
               title="Habits"
+              count={habitsDueToday.length}
               action={
                 <Button label="See all" size="sm" variant="ghost" onPress={() => router.push('/habits')} />
               }
             >
               <Card padded={false}>
-                {habitsDueToday.map((habit) => {
+                {habitsDueToday.map((habit, index) => {
                   const done = isCompleted(entriesByDate.get(habit.id)?.get(today), habit.target_count);
                   return (
-                    <Pressable
+                    <ListRow
                       key={habit.id}
-                      onPress={() =>
-                        checkIn.mutate({
-                          habitId: habit.id,
-                          date: today,
-                          count: done ? 0 : habit.target_count,
-                        })
+                      divider={index > 0}
+                      title={habit.name}
+                      titleStyle={done ? { opacity: 0.6 } : undefined}
+                      subtitle={habit.target_count > 1 ? `Target ${habit.target_count}× today` : undefined}
+                      leading={
+                        <Checkbox
+                          checked={done}
+                          accessibilityLabel={`Check in "${habit.name}" for today`}
+                          onChange={(checked) =>
+                            checkIn.mutate({
+                              habitId: habit.id,
+                              date: today,
+                              count: checked ? habit.target_count : 0,
+                            })
+                          }
+                        />
                       }
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.md,
-                        padding: spacing.md,
-                      }}
-                    >
-                      <Checkbox
-                        checked={done}
-                        accessibilityLabel={`Check in "${habit.name}" for today`}
-                        onChange={(checked) =>
-                          checkIn.mutate({
-                            habitId: habit.id,
-                            date: today,
-                            count: checked ? habit.target_count : 0,
-                          })
-                        }
-                      />
-                      <ThemedText variant="body" tone={done ? 'muted' : 'default'}>
-                        {habit.name}
-                      </ThemedText>
-                    </Pressable>
+                      trailing={
+                        done ? <Badge label="Done" tone="positive" size="sm" icon="checkmark" /> : <View />
+                      }
+                    />
                   );
                 })}
               </Card>
@@ -227,39 +240,5 @@ export default function TodayScreen() {
         }}
       />
     </Screen>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="title">{value}</ThemedText>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-    </View>
-  );
-}
-
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={{ gap: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-          {title.toUpperCase()}
-        </ThemedText>
-        <View style={{ flex: 1 }} />
-        {action}
-      </View>
-      {children}
-    </View>
   );
 }

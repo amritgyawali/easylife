@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { Stat, StatRow, HeroStat } from '@/components/ui/Stat';
 import { formatIsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import { usePortfolio, type InvestmentAssetRow } from '@/features/investments/api';
@@ -38,7 +39,7 @@ export default function InvestmentsScreen() {
         <ScreenHeader
           title="Investments"
           subtitle="Values come from prices you record — there is no market feed."
-          action={<Button label="Add holding" size="sm" onPress={() => setAssetSheetOpen(true)} />}
+          action={<Button label="Add holding" icon="add" size="sm" onPress={() => setAssetSheetOpen(true)} />}
         />
       }
     >
@@ -48,6 +49,7 @@ export default function InvestmentsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : portfolio.length === 0 ? (
         <EmptyState
+          icon="trending-up-outline"
           title="No holdings yet"
           description="Track shares, fixed deposits, gold, property or anything else you own."
           actionLabel="Add holding"
@@ -57,25 +59,29 @@ export default function InvestmentsScreen() {
         <>
           {totals.map((total) => (
             <Card key={total.currency} style={{ gap: spacing.md }}>
-              <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-                PORTFOLIO · {total.currency}
+              <ThemedText variant="overline" tone="muted" accessibilityRole="header">
+                Portfolio · {total.currency}
               </ThemedText>
-              <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-                <Figure label="Value" value={formatMoney(total.currentValueMinor, total.currency)} />
-                <Figure label="Invested" value={formatMoney(total.netInvestedMinor, total.currency)} />
-              </View>
-              <View style={{ gap: spacing.xxs }}>
-                <ThemedText variant="caption" tone="muted">
-                  {total.unrealisedGainMinor >= 0 ? 'Up by' : 'Down by'}
-                </ThemedText>
-                <ThemedText
-                  variant="subtitle"
-                  tone={total.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
-                >
-                  {total.unrealisedGainMinor >= 0 ? '+' : '-'}
-                  {formatMoney(Math.abs(total.unrealisedGainMinor), total.currency)}
-                </ThemedText>
-              </View>
+              <HeroStat
+                label={total.unrealisedGainMinor >= 0 ? 'Up by' : 'Down by'}
+                value={`${total.unrealisedGainMinor >= 0 ? '+' : '-'}${formatMoney(
+                  Math.abs(total.unrealisedGainMinor),
+                  total.currency
+                )}`}
+                tone={total.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
+              />
+              <StatRow>
+                <Stat
+                  label="Value"
+                  value={formatMoney(total.currentValueMinor, total.currency)}
+                  icon="pricetag-outline"
+                />
+                <Stat
+                  label="Invested"
+                  value={formatMoney(total.netInvestedMinor, total.currency)}
+                  icon="wallet-outline"
+                />
+              </StatRow>
               {total.unvaluedAssetCount > 0 ? (
                 <ThemedText variant="caption" tone="warning">
                   {total.unvaluedAssetCount} holding{total.unvaluedAssetCount === 1 ? '' : 's'} excluded — no
@@ -115,8 +121,8 @@ export default function InvestmentsScreen() {
                 </View>
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                  <Badge label={asset.asset_type.replace(/_/g, ' ')} />
-                  {asset.symbol ? <Badge label={asset.symbol} /> : null}
+                  <Badge label={asset.asset_type.replace(/_/g, ' ')} size="sm" />
+                  {asset.symbol ? <Badge label={asset.symbol} size="sm" /> : null}
                   {valuation.unrealisedGainMinor !== null ? (
                     <Badge
                       label={`${valuation.unrealisedGainMinor >= 0 ? '+' : '-'}${formatMoney(
@@ -125,6 +131,7 @@ export default function InvestmentsScreen() {
                         { showCurrency: false }
                       )}${valuation.returnRate !== null ? ` (${Math.round(valuation.returnRate * 100)}%)` : ''}`}
                       tone={valuation.unrealisedGainMinor >= 0 ? 'positive' : 'negative'}
+                      size="sm"
                     />
                   ) : null}
                   {valuation.realisedIncomeMinor > 0 ? (
@@ -133,6 +140,7 @@ export default function InvestmentsScreen() {
                         showCurrency: false,
                       })} received`}
                       tone="primary"
+                      size="sm"
                     />
                   ) : null}
                 </View>
@@ -148,12 +156,14 @@ export default function InvestmentsScreen() {
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <Button
                     label="Buy / sell"
+                    icon="swap-vertical-outline"
                     size="sm"
                     variant="secondary"
                     onPress={() => setTransactionAsset(asset)}
                   />
                   <Button
                     label="Update price"
+                    icon="pricetag-outline"
                     size="sm"
                     variant="ghost"
                     onPress={() => setValuationAsset(asset)}
@@ -177,16 +187,5 @@ export default function InvestmentsScreen() {
         onClose={() => setValuationAsset(null)}
       />
     </Screen>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-      <ThemedText variant="subtitle">{value}</ThemedText>
-    </View>
   );
 }

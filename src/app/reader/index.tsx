@@ -181,6 +181,7 @@ export default function ReaderScreen() {
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : matching.length === 0 ? (
         <EmptyState
+          icon={query ? 'search-outline' : 'reader-outline'}
           title={query ? 'Nothing matches' : 'Your vault is empty'}
           description={
             query

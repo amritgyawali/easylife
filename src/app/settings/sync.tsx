@@ -101,6 +101,7 @@ export default function SyncScreen() {
           <ErrorState error={notificationsQuery.error} onRetry={() => void notificationsQuery.refetch()} />
         ) : notifications.length === 0 ? (
           <EmptyState
+            icon="notifications-off-outline"
             title="No notifications"
             description="Reminders, extraction results and export updates will show up here."
           />

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useTheme } from '@/hooks/useTheme';
-import { spacing } from '@/constants/theme';
+import { radius, spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useIsOnline, usePendingSyncCount } from '@/services/offline/online-manager';
 import { useOutboxCount } from '@/services/offline/outbox-store';
@@ -29,9 +29,7 @@ export function OfflineBanner() {
   if (online && pending === 0) return null;
 
   const offline = !online;
-  const background = offline ? theme.colors.warningSurface : theme.colors.accentSurface;
-  const tone = offline ? 'warning' : 'primary';
-  const icon = offline ? 'cloud-offline-outline' : 'sync-outline';
+  const accent = offline ? theme.colors.warning : theme.colors.primary;
 
   const message = offline
     ? pending > 0
@@ -49,11 +47,27 @@ export function OfflineBanner() {
         gap: spacing.sm,
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
-        backgroundColor: background,
+        backgroundColor: offline ? theme.colors.warningSurface : theme.colors.accentSurface,
+        // A coloured rule on the leading edge distinguishes the two states
+        // even before the text is read.
+        borderLeftWidth: 3,
+        borderLeftColor: accent,
       }}
     >
-      <Ionicons name={icon} size={16} color={theme.colors[offline ? 'warning' : 'primary']} />
-      <ThemedText variant="caption" tone={tone} weight="medium" style={{ flex: 1 }}>
+      <View
+        accessible={false}
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        <Ionicons name={offline ? 'cloud-offline-outline' : 'sync-outline'} size={13} color={accent} />
+      </View>
+      <ThemedText variant="caption" weight="medium" style={{ flex: 1, color: accent }}>
         {message}
       </ThemedText>
     </View>

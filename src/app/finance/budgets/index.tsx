@@ -77,7 +77,7 @@ export default function BudgetsScreen() {
         <ScreenHeader
           title="Budgets"
           subtitle="Set a spending limit per category and watch it fill up as you spend."
-          action={<Button label="New budget" size="sm" onPress={() => setFormOpen(true)} />}
+          action={<Button label="New budget" icon="add" size="sm" onPress={() => setFormOpen(true)} />}
         />
       }
     >
@@ -87,6 +87,7 @@ export default function BudgetsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : budgets.length === 0 ? (
         <EmptyState
+          icon="pie-chart-outline"
           title="No budgets yet"
           description="Plan how much to spend per category for a month or year, then track it as you go."
           actionLabel="New budget"
@@ -105,8 +106,9 @@ export default function BudgetsScreen() {
             onManageCategories={() => router.push('/finance/categories')}
             onEditItem={(item) => setItemSheet({ budget, item })}
             onDeleteItem={(item) =>
-              confirmAndRun(`Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`, () =>
-                deleteBudgetItem.mutate(item.id)
+              confirmAndRun(
+                `Remove ${categoryName.get(item.category_id) ?? 'this category'} from the budget?`,
+                () => deleteBudgetItem.mutate(item.id)
               )
             }
             onDelete={() =>
@@ -124,8 +126,12 @@ export default function BudgetsScreen() {
         budget={itemSheet?.budget ?? null}
         item={itemSheet?.item ?? null}
         usedCategoryIds={
-          new Set((itemSheet ? budgets.find((row) => row.budget.id === itemSheet.budget.id) : undefined)
-            ?.itemProgress.map((entry) => entry.item.category_id) ?? [])
+          new Set(
+            (itemSheet
+              ? budgets.find((row) => row.budget.id === itemSheet.budget.id)
+              : undefined
+            )?.itemProgress.map((entry) => entry.item.category_id) ?? []
+          )
         }
         categories={expenseCategories}
         onClose={() => setItemSheet(null)}
@@ -437,7 +443,7 @@ function BudgetFormSheet({
           />
           <ThemedText variant="body" style={{ flex: 1 }}>
             Start from &quot;{previousBudget.name}&quot;&apos;s categories
-            {rolloverEnabled ? ', carrying over what\'s unspent' : ''}
+            {rolloverEnabled ? ", carrying over what's unspent" : ''}
           </ThemedText>
         </View>
       ) : null}

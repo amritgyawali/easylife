@@ -48,7 +48,7 @@ export default function GoalsScreen() {
         <ScreenHeader
           title="Savings goals"
           subtitle="Progress is the sum of what you've put in, less what you've taken out."
-          action={<Button label="New goal" size="sm" onPress={() => setFormOpen(true)} />}
+          action={<Button label="New goal" icon="add" size="sm" onPress={() => setFormOpen(true)} />}
         />
       }
     >
@@ -58,6 +58,7 @@ export default function GoalsScreen() {
         <ErrorState error={error} onRetry={refetch} />
       ) : goals.length === 0 ? (
         <EmptyState
+          icon="flag-outline"
           title="No goals yet"
           description="Set something aside for — an emergency fund, a trip, a deposit."
           actionLabel="New goal"

@@ -7,6 +7,8 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Section } from '@/components/ui/Section';
+import { ListRow } from '@/components/ui/ListRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -57,7 +59,7 @@ export default function CategoriesScreen() {
         <ScreenHeader
           title="Categories"
           subtitle="How spending and income are grouped in reports."
-          action={<Button label="Add" size="sm" onPress={() => openSheet(null)} />}
+          action={<Button label="Add category" icon="add" size="sm" onPress={() => openSheet(null)} />}
         />
       }
     >
@@ -68,6 +70,7 @@ export default function CategoriesScreen() {
       ) : (categories?.length ?? 0) === 0 ? (
         <View style={{ gap: spacing.lg }}>
           <EmptyState
+            icon="pricetags-outline"
             title="No categories yet"
             description="Start from a common set for Nepal, or add your own from scratch."
             actionLabel="Use the starter set"
@@ -82,39 +85,36 @@ export default function CategoriesScreen() {
         </View>
       ) : (
         byKind.map((group) => (
-          <View key={group.value} style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              {group.label.toUpperCase()}
-            </ThemedText>
+          <Section key={group.value} title={group.label} count={group.rows.length}>
             <Card padded={false}>
-              {group.rows.map((category) => (
-                <View
+              {group.rows.map((category, index) => (
+                <ListRow
                   key={category.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    paddingLeft: spacing.md,
-                  }}
-                >
-                  <ThemedText variant="body" style={{ flex: 1 }}>
-                    {category.name}
-                  </ThemedText>
-                  {category.is_system ? <Badge label="Starter" /> : null}
-                  <IconButton
-                    icon="create-outline"
-                    accessibilityLabel={`Rename ${category.name}`}
-                    onPress={() => openSheet(category)}
-                  />
-                  <IconButton
-                    icon="archive-outline"
-                    accessibilityLabel={`Archive ${category.name}`}
-                    onPress={() => archiveCategory.mutate(category.id)}
-                  />
-                </View>
+                  divider={index > 0}
+                  title={category.name}
+                  icon="pricetag-outline"
+                  iconTone={group.value === 'income' ? 'positive' : 'neutral'}
+                  trailing={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                      {category.is_system ? <Badge label="Starter" size="sm" /> : null}
+                      <IconButton
+                        icon="create-outline"
+                        accessibilityLabel={`Rename ${category.name}`}
+                        onPress={() => openSheet(category)}
+                        size={17}
+                      />
+                      <IconButton
+                        icon="archive-outline"
+                        accessibilityLabel={`Archive ${category.name}`}
+                        onPress={() => archiveCategory.mutate(category.id)}
+                        size={17}
+                      />
+                    </View>
+                  }
+                />
               ))}
             </Card>
-          </View>
+          </Section>
         ))
       )}
 

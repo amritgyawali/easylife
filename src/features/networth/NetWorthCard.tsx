@@ -1,9 +1,13 @@
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
+import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Divider } from '@/components/ui/Divider';
+import { DetailRow } from '@/components/ui/Stat';
 import { formatIsoDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import { useNetWorth } from '@/features/networth/use-net-worth';
@@ -26,19 +30,32 @@ export function NetWorthCard({ compact = false }: NetWorthCardProps) {
 
   if (isLoading) {
     return (
-      <Card style={{ gap: spacing.sm }}>
-        <Skeleton height={14} width="40%" />
-        <Skeleton height={30} width="60%" />
+      <Card variant="elevated" style={{ gap: spacing.sm }}>
+        <Skeleton height={12} width="35%" />
+        <Skeleton height={36} width="60%" />
+        <Skeleton height={12} width="45%" />
       </Card>
     );
   }
 
   const hasAnything = breakdown.totalsByCurrency.size > 0;
+  const components = breakdown.components.filter((component) => component.totalsByCurrency.size > 0);
+
+  const caveats = [
+    converted.unconvertible.length > 0
+      ? `Excludes ${converted.unconvertible.join(', ')} — no exchange rate recorded.`
+      : null,
+    converted.unvaluedAssetCount > 0
+      ? `Excludes ${converted.unvaluedAssetCount} holding${
+          converted.unvaluedAssetCount === 1 ? '' : 's'
+        } with no price recorded.`
+      : null,
+  ].filter((caveat): caveat is string => caveat !== null);
 
   return (
-    <Card style={{ gap: spacing.md }}>
-      <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-        NET WORTH
+    <Card variant="elevated" style={{ gap: spacing.md }}>
+      <ThemedText variant="overline" tone="muted" accessibilityRole="header">
+        Net worth
       </ThemedText>
 
       {!hasAnything ? (
@@ -47,52 +64,58 @@ export function NetWorthCard({ compact = false }: NetWorthCardProps) {
         </ThemedText>
       ) : (
         <>
-          <ThemedText variant="title" tone={converted.totalMinor < 0 ? 'negative' : 'default'}>
+          <ThemedText
+            variant="display"
+            tone={converted.totalMinor < 0 ? 'negative' : 'default'}
+            numeric
+            adjustsFontSizeToFit
+            numberOfLines={1}
+          >
             {formatMoney(converted.totalMinor, targetCurrency)}
           </ThemedText>
 
-          {converted.unconvertible.length > 0 ? (
-            <ThemedText variant="caption" tone="warning">
-              Excludes {converted.unconvertible.join(', ')} — no exchange rate recorded.
-            </ThemedText>
-          ) : null}
-
           {converted.oldestRateDate ? (
-            <ThemedText variant="caption" tone="muted">
+            <ThemedText variant="caption" tone="subtle">
               Converted using rates from {formatIsoDate(converted.oldestRateDate)}.
             </ThemedText>
           ) : null}
 
-          {converted.unvaluedAssetCount > 0 ? (
-            <ThemedText variant="caption" tone="warning">
-              Excludes {converted.unvaluedAssetCount} holding
-              {converted.unvaluedAssetCount === 1 ? '' : 's'} with no price recorded.
-            </ThemedText>
-          ) : null}
+          {caveats.map((caveat) => (
+            <Caveat key={caveat} message={caveat} />
+          ))}
 
-          {!compact ? (
-            <View style={{ gap: spacing.xs }}>
-              {breakdown.components
-                .filter((component) => component.totalsByCurrency.size > 0)
-                .map((component) => (
-                  <View
+          {!compact && components.length > 0 ? (
+            <>
+              <Divider />
+              <View style={{ gap: spacing.xs }}>
+                {components.map((component) => (
+                  <DetailRow
                     key={component.label}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-                  >
-                    <ThemedText variant="caption" tone="muted" style={{ flex: 1 }}>
-                      {component.label}
-                    </ThemedText>
-                    <ThemedText variant="caption">
-                      {[...component.totalsByCurrency.entries()]
-                        .map(([currency, total]) => formatMoney(total, currency))
-                        .join(' · ')}
-                    </ThemedText>
-                  </View>
+                    label={component.label}
+                    value={[...component.totalsByCurrency.entries()]
+                      .map(([currency, total]) => formatMoney(total, currency))
+                      .join(' · ')}
+                  />
                 ))}
-            </View>
+              </View>
+            </>
           ) : null}
         </>
       )}
     </Card>
+  );
+}
+
+/** An exclusion the total couldn't account for, stated plainly next to it. */
+function Caveat({ message }: { message: string }) {
+  const theme = useTheme();
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs }}>
+      <Ionicons name="alert-circle-outline" size={13} color={theme.colors.warning} style={{ marginTop: 2 }} />
+      <ThemedText variant="caption" tone="warning" style={{ flex: 1 }}>
+        {message}
+      </ThemedText>
+    </View>
   );
 }

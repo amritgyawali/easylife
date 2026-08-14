@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
 
-import { useTheme } from '@/hooks/useTheme';
-import { radius, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonList } from '@/components/ui/Skeleton';
+import { SkeletonCards } from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { Section } from '@/components/ui/Section';
+import { Stat, StatRow, HeroStat } from '@/components/ui/Stat';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { DataTable, type Column } from '@/components/ui/DataTable';
 import { OptionGroup } from '@/components/forms/OptionGroup';
+import { SegmentedControl } from '@/components/forms/SegmentedControl';
 import { useToday } from '@/hooks/useToday';
 import { formatMoney } from '@/utils/money';
 import { useCategories } from '@/features/finance/categories-api';
@@ -76,9 +79,9 @@ export default function ReportsScreen() {
       header={
         <>
           <ScreenHeader title="Reports" subtitle={range.label} />
-          <OptionGroup options={monthOptions} value={monthsBack} onChange={setMonthsBack} />
+          <OptionGroup options={monthOptions} value={monthsBack} onChange={setMonthsBack} size="sm" />
           {currencyOptions.length > 1 ? (
-            <OptionGroup
+            <SegmentedControl
               label="Currency"
               options={currencyOptions}
               value={activeCurrency ?? ''}
@@ -89,43 +92,43 @@ export default function ReportsScreen() {
       }
     >
       {transactionsQuery.isLoading ? (
-        <SkeletonList rows={5} />
+        <SkeletonCards count={3} />
       ) : transactionsQuery.error ? (
         <ErrorState error={transactionsQuery.error} onRetry={() => void transactionsQuery.refetch()} />
       ) : !summary || !activeCurrency ? (
         <EmptyState
+          icon="bar-chart-outline"
           title="Nothing to report for this month"
           description="Record some income or spending and the breakdown appears here. Transfers between your own accounts are always excluded."
         />
       ) : (
         <>
-          <Card style={{ gap: spacing.md }}>
-            <View style={{ flexDirection: 'row', gap: spacing.lg }}>
-              <Total
+          <Card variant="elevated" style={{ gap: spacing.lg }}>
+            <HeroStat
+              label={summary.netMinor >= 0 ? 'Left over' : 'Overspent by'}
+              value={formatMoney(Math.abs(summary.netMinor), activeCurrency)}
+              tone={summary.netMinor >= 0 ? 'positive' : 'negative'}
+              hint={`${range.label} · ${summary.transactionCount} transaction${
+                summary.transactionCount === 1 ? '' : 's'
+              }`}
+            />
+            <StatRow>
+              <Stat
                 label="Income"
                 value={formatMoney(summary.incomeMinor, activeCurrency)}
                 tone="positive"
+                icon="arrow-down-outline"
               />
-              <Total
+              <Stat
                 label="Spent"
                 value={formatMoney(summary.expenseMinor, activeCurrency)}
                 tone="negative"
+                icon="arrow-up-outline"
               />
-            </View>
-            <View style={{ gap: spacing.xxs }}>
-              <ThemedText variant="caption" tone="muted">
-                {summary.netMinor >= 0 ? 'Left over' : 'Overspent by'}
-              </ThemedText>
-              <ThemedText variant="title" tone={summary.netMinor >= 0 ? 'positive' : 'negative'}>
-                {formatMoney(Math.abs(summary.netMinor), activeCurrency)}
-              </ThemedText>
-            </View>
+            </StatRow>
           </Card>
 
-          <View style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              WHERE IT WENT
-            </ThemedText>
+          <Section title="Where it went" description="Spending by category, largest first.">
             {expenseTotals.length === 0 ? (
               <Card>
                 <ThemedText variant="body" tone="muted">
@@ -133,104 +136,93 @@ export default function ReportsScreen() {
                 </ThemedText>
               </Card>
             ) : (
-              <Card style={{ gap: spacing.md }}>
-                {expenseTotals.map((total) => (
-                  <CategoryBar
-                    key={total.categoryId ?? 'uncategorised'}
-                    label={
-                      total.categoryId
-                        ? (categoryName.get(total.categoryId) ?? 'Removed category')
-                        : 'Uncategorised'
-                    }
-                    amount={formatMoney(total.totalMinor, total.currency)}
-                    share={total.share}
-                  />
-                ))}
+              <Card style={{ gap: spacing.lg }}>
+                {expenseTotals.map((total) => {
+                  const label = total.categoryId
+                    ? (categoryName.get(total.categoryId) ?? 'Removed category')
+                    : 'Uncategorised';
+                  const percent = Math.round(total.share * 100);
+                  return (
+                    <ProgressBar
+                      key={total.categoryId ?? 'uncategorised'}
+                      value={total.share}
+                      label={label}
+                      hint={`${formatMoney(total.totalMinor, total.currency)} · ${percent}%`}
+                      accessibilityLabel={`${label}: ${formatMoney(
+                        total.totalMinor,
+                        total.currency
+                      )}, ${percent} percent of spending`}
+                    />
+                  );
+                })}
               </Card>
             )}
-          </View>
+          </Section>
 
-          <View style={{ gap: spacing.sm }}>
-            <ThemedText variant="label" tone="muted" weight="semibold" accessibilityRole="header">
-              LAST {TREND_MONTHS} MONTHS
-            </ThemedText>
-            <Card padded={false}>
-              {trend.map((month) => (
-                <View
-                  key={month.label}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.md,
-                    padding: spacing.md,
-                  }}
-                >
-                  <ThemedText variant="body" style={{ flex: 1 }}>
-                    {month.label}
-                  </ThemedText>
-                  <ThemedText variant="caption" tone="positive">
-                    +{formatMoney(month.incomeMinor, activeCurrency, { showCurrency: false })}
-                  </ThemedText>
-                  <ThemedText variant="caption" tone="negative">
-                    -{formatMoney(month.expenseMinor, activeCurrency, { showCurrency: false })}
-                  </ThemedText>
-                </View>
-              ))}
-            </Card>
-          </View>
+          <Section title={`Last ${TREND_MONTHS} months`}>
+            <DataTable
+              data={trend}
+              keyExtractor={(month) => month.label}
+              accessibilityLabel="Monthly income and spending"
+              columns={trendColumns(activeCurrency)}
+            />
+          </Section>
         </>
       )}
     </Screen>
   );
 }
 
-function Total({ label, value, tone }: { label: string; value: string; tone: 'positive' | 'negative' }) {
-  return (
-    <View style={{ flex: 1, gap: spacing.xxs }}>
-      <ThemedText variant="caption" tone="muted">
-        {label}
-      </ThemedText>
-      <ThemedText variant="subtitle" tone={tone}>
-        {value}
-      </ThemedText>
-    </View>
-  );
-}
-
 /**
- * A labelled proportion bar. The percentage is always spelled out in text
- * next to the bar so the value never depends on reading the bar's width.
+ * Columns for the monthly trend table. Declared once and handed to
+ * `DataTable`, which renders them as a real table on a laptop and as stacked
+ * label/value rows on a phone.
  */
-function CategoryBar({ label, amount, share }: { label: string; amount: string; share: number }) {
-  const theme = useTheme();
-  const percent = Math.round(share * 100);
-
-  return (
-    <View style={{ gap: spacing.xs }} accessibilityLabel={`${label}: ${amount}, ${percent} percent`}>
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-        <ThemedText variant="body" style={{ flex: 1 }} numberOfLines={1}>
-          {label}
+function trendColumns(currency: string): Column<{
+  label: string;
+  incomeMinor: number;
+  expenseMinor: number;
+  netMinor: number;
+}>[] {
+  return [
+    { key: 'month', header: 'Month', render: (month) => month.label, flex: 1.4, compact: 'title' },
+    {
+      key: 'income',
+      header: 'In',
+      numeric: true,
+      render: (month) => (
+        <ThemedText variant="body" tone="positive" numeric numberOfLines={1}>
+          +{formatMoney(month.incomeMinor, currency, { showCurrency: false })}
         </ThemedText>
-        <ThemedText variant="body" weight="semibold">
-          {amount}
+      ),
+    },
+    {
+      key: 'expense',
+      header: 'Out',
+      numeric: true,
+      render: (month) => (
+        <ThemedText variant="body" tone="negative" numeric numberOfLines={1}>
+          -{formatMoney(month.expenseMinor, currency, { showCurrency: false })}
         </ThemedText>
-        <ThemedText variant="body" tone="muted">
-          {percent}%
+      ),
+    },
+    {
+      key: 'net',
+      header: 'Net',
+      numeric: true,
+      compact: 'meta',
+      render: (month) => (
+        <ThemedText
+          variant="body"
+          weight="semibold"
+          tone={month.netMinor >= 0 ? 'positive' : 'negative'}
+          numeric
+          numberOfLines={1}
+        >
+          {month.netMinor >= 0 ? '+' : '-'}
+          {formatMoney(Math.abs(month.netMinor), currency, { showCurrency: false })}
         </ThemedText>
-      </View>
-      <View
-        accessible={false}
-        style={{ height: 6, borderRadius: radius.full, backgroundColor: theme.colors.surfaceAlt }}
-      >
-        <View
-          style={{
-            height: 6,
-            width: `${Math.max(percent, 1)}%`,
-            borderRadius: radius.full,
-            backgroundColor: theme.colors.primary,
-          }}
-        />
-      </View>
-    </View>
-  );
+      ),
+    },
+  ];
 }
